@@ -9,6 +9,10 @@ var _code_edit: LineEdit
 var _resend: Button
 var _resend_left := 0.0
 var _busy := false
+var _delete: Button
+var _delete_armed := 0.0
+var _privacy_status: Label
+const PRIVACY_PARAGRAPHS := 7
 
 
 func _ready() -> void:
@@ -138,12 +142,50 @@ func _ready() -> void:
 	hint.add_theme_font_size_override("font_size", 24)
 	_box.add_child(hint)
 
+	# privacy: what we keep and why, download everything, delete the account (AVG/GDPR)
+	_box.add_child(_heading(tr("PRIVACY_TITLE")))
+	var privacy_row := HBoxContainer.new()
+	privacy_row.add_theme_constant_override("separation", 20)
+	_box.add_child(privacy_row)
+	var read := Button.new()
+	read.text = tr("PRIVACY_READ")
+	read.pressed.connect(_open_privacy)
+	privacy_row.add_child(read)
+	var download := Button.new()
+	download.text = tr("PRIVACY_DOWNLOAD")
+	privacy_row.add_child(download)
+	_delete = Button.new()
+	_delete.text = tr("PRIVACY_DELETE")
+	_delete.visible = St33f.is_signed_in()
+	privacy_row.add_child(_delete)
+	_privacy_status = Label.new()
+	_privacy_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_privacy_status.custom_minimum_size = Vector2(1000, 0)
+	_box.add_child(_privacy_status)
+	download.pressed.connect(func() -> void:
+		download.disabled = true
+		_privacy_status.text = tr("PRIVACY_GATHERING")
+		var r: Dictionary = await MyData.download()
+		download.disabled = false
+		var where := tr("PRIVACY_SAVED_WEB") if str(r.path) == "" else tr("PRIVACY_SAVED_AT").format({"path": r.path})
+		_privacy_status.text = where + ("" if (r.missing as Array).is_empty() else "\n" + tr("PRIVACY_PARTIAL")))
+	_delete.pressed.connect(_on_delete)
+	if str(Boot.args.get("dialog", "")) == "privacy": # debug entry for the smoke shots
+		_open_privacy.call_deferred()
+
 	_show_account()
-	St33f.signed_in.connect(func(_u: String) -> void: _show_account())
+	St33f.signed_in.connect(func(_u: String) -> void:
+		_delete.visible = true
+		_show_account())
 	St33f.signed_out.connect(_show_account)
 
 
 func _process(delta: float) -> void:
+	if _delete_armed > 0.0:
+		_delete_armed -= delta
+		if _delete_armed <= 0.0:
+			_delete.text = tr("PRIVACY_DELETE")
+			_privacy_status.text = ""
 	if _resend_left > 0.0 and _resend != null:
 		_resend_left -= delta
 		_resend.disabled = _resend_left > 0.0
@@ -273,3 +315,63 @@ func _verify() -> void:
 		_status.text = tr("SIGNIN_DONE")
 	else:
 		_status.text = UiErrors.text(res.error)
+
+## Two taps: the first arms the button for five seconds, the second deletes.
+func _on_delete() -> void:
+	if _delete_armed <= 0.0:
+		_delete_armed = 5.0
+		_delete.text = tr("PRIVACY_DELETE_CONFIRM")
+		_privacy_status.text = tr("PRIVACY_DELETE_EXPLAIN")
+		return
+	_delete.disabled = true
+	_privacy_status.text = tr("PRIVACY_DELETING")
+	var r: Dictionary = await St33f.delete_account()
+	_delete.disabled = false
+	_delete_armed = 0.0
+	_delete.text = tr("PRIVACY_DELETE")
+	if r.ok:
+		_delete.visible = false
+		_privacy_status.text = tr("PRIVACY_DELETED")
+		_show_account()
+	else:
+		_privacy_status.text = tr("PRIVACY_DELETE_FAILED")
+
+
+func _open_privacy() -> void:
+	var shade := ColorRect.new()
+	shade.color = Color(0, 0, 0, 0.45)
+	add_child(shade)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed or ev is InputEventScreenTouch and ev.pressed:
+			shade.queue_free())
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(1300, 860)
+	shade.add_child(panel)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 14)
+	panel.add_child(box)
+	box.add_child(_heading(tr("PRIVACY_TITLE")))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(scroll)
+	var text := VBoxContainer.new()
+	text.add_theme_constant_override("separation", 16)
+	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(text)
+	for i in range(1, PRIVACY_PARAGRAPHS + 1):
+		var l := Label.new()
+		l.text = tr("PRIVACY_P%d" % i)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(1200, 0)
+		l.add_theme_font_size_override("font_size", 30)
+		text.add_child(l)
+	var close := Button.new()
+	close.text = tr("COMMON_CLOSE")
+	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	close.pressed.connect(shade.queue_free)
+	box.add_child(close)

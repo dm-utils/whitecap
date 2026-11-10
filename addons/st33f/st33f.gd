@@ -167,6 +167,37 @@ func sign_out(everywhere := false) -> void:
 	_forget_session()
 
 
+## Everything the platform holds about the signed-in player, from every service, in one dictionary (to save as
+## a file). Returns {ok, data: {accounts, leaderboards, feedback}, missing: [services that did not answer]}.
+func export_my_data() -> Dictionary:
+	if not is_signed_in():
+		return {"ok": false, "data": {}, "missing": ["signed_out"]}
+	var data := {"exported_at": Time.get_datetime_string_from_system(true) + "Z", "game": game}
+	var missing: Array = []
+	for pair in [["accounts", client.export_account], ["leaderboards", client.export_leaderboards], ["feedback", client.export_feedback]]:
+		var r: Dictionary = handle_result(await pair[1].call())
+		if r.ok:
+			data[pair[0]] = r.data
+		else:
+			missing.append(pair[0])
+	return {"ok": missing.is_empty(), "data": data, "missing": missing}
+
+
+## Delete the account: first what the other services hold (so it is gone at once), then the account itself, which
+## leaves a tombstone so the services also wipe anything left within the hour. Ends the session on this device.
+## Returns {ok, error}. The other services' answers don't block: their hourly safety net finishes the job.
+func delete_account() -> Dictionary:
+	if not is_signed_in():
+		return {"ok": false, "error": "signed_out"}
+	await client.delete_leaderboards()
+	await client.delete_feedback()
+	var r: Dictionary = await client.delete_account()
+	if not r.ok:
+		return {"ok": false, "error": r.error.code if r.error != null else "network"}
+	_forget_session()
+	return {"ok": true, "error": null}
+
+
 ## Any call that comes back signed_out ends the local session too.
 func handle_result(res: Dictionary) -> Dictionary:
 	if not res.ok and res.error != null and (res.error as St33fError).is_signed_out() and is_signed_in():

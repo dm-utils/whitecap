@@ -193,3 +193,29 @@ func add_friend(code: String) -> Dictionary:
 
 func remove_friend(player_id: String) -> Dictionary:
 	return await call_api(HTTPClient.METHOD_DELETE, "/v1/games/%s/friends/%s" % [game, player_id], null, true, "leaderboards")
+
+
+# --- privacy: export and delete (each service answers for its own data) ---
+
+func export_account() -> Dictionary:
+	return await call_api(HTTPClient.METHOD_GET, "/v1/me/export", null, true)
+
+
+func delete_account() -> Dictionary:
+	return await call_api(HTTPClient.METHOD_DELETE, "/v1/me", {"confirm": "delete"}, true)
+
+
+func export_leaderboards() -> Dictionary:
+	return await call_api(HTTPClient.METHOD_GET, "/v1/games/%s/mine" % game, null, true, "leaderboards")
+
+
+func delete_leaderboards() -> Dictionary:
+	return await call_api(HTTPClient.METHOD_DELETE, "/v1/games/%s/mine" % game, null, true, "leaderboards")
+
+
+func export_feedback() -> Dictionary:
+	return await call_api(HTTPClient.METHOD_GET, "/v1/feedback/mine/export", null, true, "feedback")
+
+
+func delete_feedback() -> Dictionary:
+	return await call_api(HTTPClient.METHOD_DELETE, "/v1/feedback/mine", null, true, "feedback")

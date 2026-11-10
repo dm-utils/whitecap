@@ -38,6 +38,7 @@ func _ready() -> void:
 	test_sdk_has_what_the_game_calls()
 	test_score_check()
 	test_names_mastery_profiles()
+	await test_my_data()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -601,6 +602,20 @@ func test_names_mastery_profiles() -> void:
 		c.free()
 	body.free()
 	screen.free()
+
+
+## "Download my data": signed out it holds what is on this device; the file is written where the player finds it.
+func test_my_data() -> void:
+	var data: Dictionary = await MyData.gather()
+	check(data.device is Dictionary and data.platform == null and data.game == "getij", "signed out: the device profile, no platform part")
+	var text := JSON.stringify(data, "  ")
+	check(not text.contains("cs1_"), "no session token in the export")
+	var path := MyData.save(text)
+	check(path != "" and FileAccess.file_exists(path) and FileAccess.get_file_as_string(path) == text, "export file written (%s)" % path)
+	if path != "":
+		DirAccess.remove_absolute(path)
+	for i in range(1, 8):
+		check(tr("PRIVACY_P%d" % i) != "PRIVACY_P%d" % i, "privacy paragraph %d has a text" % i)
 
 
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).
