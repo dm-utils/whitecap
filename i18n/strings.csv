@@ -1,0 +1,20 @@
+keys,en
+TITLE,GETIJ
+BOOT_WORKING_TITLE,working title
+BOOT_TAP,Tap to start
+BOOT_LOADING,Loading…
+MENU_PLAY,PLAY
+MENU_DAILY,Daily Challenge
+MENU_COLLECTION,Collection
+MENU_PATH,Treasure Path
+MENU_LEADERBOARD,Leaderboard
+MENU_PROFILE,Profile
+MENU_SETTINGS,Settings
+MENU_COMING_SOON,Coming soon
+MENU_ANIMALS_LOADED,{count} animals ready
+MENU_VERSION,Version {version}
+MATCH_PLACEHOLDER,Match will be here (seed {seed})
+COMMON_BACK,Back
+ANIMAL_CRAB,Pinch the Beach Crab
+ANIMAL_OCTOPUS,Inka the Octopus
+ANIMAL_GULL,Skye the Gull

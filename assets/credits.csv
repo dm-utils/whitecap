@@ -1,0 +1,4 @@
+file,source,author,licence,date,notes
+assets/fonts/Fredoka-Variable.ttf,https://github.com/google/fonts/tree/main/ofl/fredoka,The Fredoka Project Authors,OFL-1.1,2026-11-10,Titles and buttons; licence text in assets/fonts/OFL-Fredoka.txt
+assets/fonts/Nunito-Variable.ttf,https://github.com/google/fonts/tree/main/ofl/nunito,The Nunito Project Authors,OFL-1.1,2026-11-10,Body text; licence text in assets/fonts/OFL-Nunito.txt
+icon.svg,own work,ST33F,proprietary,2026-11-10,Placeholder app icon

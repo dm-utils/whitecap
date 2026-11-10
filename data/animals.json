@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "animals": [
+    { "id": "crab",    "name_key": "ANIMAL_CRAB",    "type": "land",  "hp": 110, "attack": "snip", "special": "dash", "in_slice": true },
+    { "id": "octopus", "name_key": "ANIMAL_OCTOPUS", "type": "water", "hp": 95,  "attack": "fan",  "special": "ink",  "in_slice": true },
+    { "id": "gull",    "name_key": "ANIMAL_GULL",    "type": "flyer", "hp": 80,  "attack": "long", "special": "dive", "in_slice": true }
+  ]
+}
