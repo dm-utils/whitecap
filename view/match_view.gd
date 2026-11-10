@@ -11,7 +11,8 @@ const RESULT_SCENE := "res://ui/result_screen.tscn"
 const ANIMAL_PX := 96.0 # on-screen size of an animal (styleguide: recognisable silhouette)
 
 var m: Match
-var board: Node2D # island, snacks, shadows and rings (z 0)
+var island: IslandView # ground and water, one shader (z -1)
+var board: Node2D # snacks, ink, dive markers, ripples, shadows and rings (z 0)
 var actors: Node2D # cutout animals, sorted by y (z 1)
 var overlay: Node2D # projectiles, effects, bars, target (z 2)
 var cam: Camera2D
@@ -31,6 +32,12 @@ var _msg := ""
 var _msg_t := 0.0
 var _fps_t := 0.0
 var _t := 0.0
+var fx := FxDraw.new()
+var _ink := Color("2A1F3D")
+var _in_water := {} # id -> bool, to splash when an animal enters the water
+var _wake := {} # id -> seconds until the next ripple behind a swimmer
+var _dive_delay := {} # Dive instance id -> its delay when first seen (marker progress)
+var _blind := 0.0 # ink blindness on screen, eases in and out
 
 
 func _ready() -> void:
@@ -52,6 +59,14 @@ func _ready() -> void:
 	controls = str(profile.get("settings", {}).get("controls", "keys"))
 	_remember_positions()
 
+	var sea := Node2D.new() # the open sea behind everything
+	sea.z_index = -2
+	sea.draw.connect(func(): sea.draw_rect(Rect2(-4000, -4000, m.sim.width * 1000 * PX + 8000, m.sim.height * 1000 * PX + 8000), ABYSS))
+	add_child(sea)
+	island = IslandView.new().setup(m.sim, 1000.0 * PX)
+	island.z_index = -1
+	add_child(island)
+	_ink = Color(str(Content.load_json("res://data/palette.json").world.ink))
 	board = Node2D.new()
 	board.draw.connect(_draw_board)
 	add_child(board)
@@ -111,6 +126,8 @@ func _process(delta: float) -> void:
 	for f in _fx:
 		f.t += delta
 	_fx = _fx.filter(func(f): return f.t < 0.7)
+	fx.update(delta)
+	_update_blind(delta)
 	_msg_t -= delta
 	_update_cutouts()
 	_update_camera(delta)
@@ -231,12 +248,16 @@ func _handle_events() -> void:
 			"ko":
 				_cutouts[int(ev.id)].trigger("ko")
 				_fx.append({"kind": "splash", "pos": Vector2(ev.x, ev.y) * PX, "t": 0.0})
+				fx.splash(Vector2(ev.x, ev.y) * PX, 1.6)
 				if int(ev.id) == m.human:
 					_say(tr("HUD_WASHED_AWAY"), 1.5)
 			"snack":
 				_fx.append({"kind": "heal", "pos": Vector2(ev.x, ev.y) * PX, "t": 0.0})
 			"dive":
 				_fx.append({"kind": "boom", "pos": Vector2(ev.x, ev.y) * PX, "t": 0.0})
+				var at := Vector2(ev.x, ev.y)
+				var wet := m.sim.depth_at(int(at.x), int(at.y)) >= 1
+				fx.splash(at * PX, 2.0, Color.WHITE if wet else Color("C9A26B"))
 			"tide_warning":
 				_say(tr("HUD_TIDE_WARNING"), 2.0)
 			"tide_rise":
@@ -268,55 +289,36 @@ func _finish() -> void:
 
 # --- drawing: island, water, snacks, effects, animals ---
 
-const SAND := [Color("C9A26B"), Color("E5C384"), Color("F2D49B"), Color("F5DCA9")]
-const SHALLOW := Color("5FD3C9")
 const DEEP := Color("1F6F9F")
 const ABYSS := Color("134A6E")
-const FOAM := Color(0.97, 0.98, 0.97, 0.85)
 const INK := Color("2B3A4A")
 const ME := Color("3FE0FF")
 const FOE := Color("FF5A4E")
 
 
-func _tile_color(depth: int) -> Color:
-	if depth >= 3:
-		return ABYSS
-	if depth == 2:
-		return DEEP
-	if depth == 1:
-		return SHALLOW
-	return SAND[clampi(-depth, 0, 3)]
-
-
+## On the ground, below the animals: snacks, ink clouds, dive markers, ripples, shadows and team rings.
 func _draw_board() -> void:
 	var sim := m.sim
-	var ts := 1000.0 * PX
-	var warn := sim.phase_left <= int(sim.rules.tide.warn_ticks) and sim.level < int(sim.rules.tide.max_level)
-	board.draw_rect(Rect2(-2000, -2000, sim.width * ts + 4000, sim.height * ts + 4000), ABYSS)
-	for ty in sim.height:
-		for tx in sim.width:
-			var d := sim.level - sim.heights[ty * sim.width + tx]
-			var r := Rect2(tx * ts, ty * ts, ts + 1, ts + 1)
-			board.draw_rect(r, _tile_color(d))
-			if d == 1:
-				var w := sin(_t * 2.0 + tx + ty) * 4.0
-				board.draw_line(r.position + Vector2(10, 40 + w), r.position + Vector2(70, 40 + w), Color(1, 1, 1, 0.25), 3.0)
-			if d >= 1:
-				_draw_foam(tx, ty, r, d)
-			if warn and d == 0:
-				board.draw_rect(r, Color(1, 1, 1, 0.18 + 0.18 * sin(_t * 14.0)))
 	for s in sim.snacks:
 		var p := Vector2(s[0], s[1]) * PX
 		board.draw_circle(p, 13.0, INK)
 		board.draw_circle(p, 10.0, Color("5BD66B"))
+	var cloud_ticks := _special_value("ink", "ticks", 120)
 	for c in sim.clouds:
-		var p := Vector2(c.x, c.y) * PX
-		for i in 5:
-			var a := i * 1.26 + _t * 0.5
-			board.draw_circle(p + Vector2(cos(a) * 40, sin(a) * 32), c.radius * PX * 0.6, Color(0.17, 0.12, 0.24, minf(0.7, c.life / 30.0)))
+		var fade := clampf(float(c.life) / 20.0, 0.0, 1.0) * clampf(float(cloud_ticks - c.life + 1) / 4.0, 0.0, 1.0)
+		FxDraw.ink_cloud(board, Vector2(c.x, c.y) * PX, c.radius * PX, _t, fade, _ink)
+	var live := {}
 	for v in sim.dives:
-		var col := ME if v.owner == m.human else FOE
-		board.draw_arc(Vector2(v.x, v.y) * PX, v.radius * PX, 0, TAU, 40, col, 4.0)
+		var key: int = v.get_instance_id()
+		live[key] = true
+		if not _dive_delay.has(key):
+			_dive_delay[key] = maxi(1, v.delay)
+		var progress: float = 1.0 - (float(v.delay) - _alpha()) / float(_dive_delay[key])
+		FxDraw.dive_marker(board, Vector2(v.x, v.y) * PX, v.radius * PX, clampf(progress, 0.0, 1.0), ME if v.owner == m.human else FOE, _t)
+	for key in _dive_delay.keys():
+		if not live.has(key):
+			_dive_delay.erase(key)
+	fx.draw_rings(board)
 	# shadows and team rings under the animals (styleguide: cyan = you, coral = others)
 	for e in m.sim.ents:
 		if e.alive:
@@ -345,26 +347,14 @@ func _draw_overlay() -> void:
 				overlay.draw_circle(f.pos + Vector2(0, -k * 30.0), 8.0, Color(0.36, 0.84, 0.42, 1.0 - k))
 			_:
 				overlay.draw_arc(f.pos, 4.0 + k * 16.0, 0, TAU, 16, Color(1, 1, 1, 1.0 - k), 2.0)
+	fx.draw_drops(overlay)
+	if _blind > 0.01:
+		FxDraw.ink_blind(overlay, _pos_px(sim.ents[m.human]), 150.0, _blind, _ink)
 	for e in sim.ents:
 		if e.alive:
 			_draw_bars(e)
 	if _target >= 0 and controls == "keys" and sim.ents[_target].alive:
 		overlay.draw_arc(_pos_px(sim.ents[_target]), 46.0, _t * 2.0, _t * 2.0 + TAU * 0.85, 32, Color("FFC530"), 4.0)
-
-
-func _draw_foam(tx: int, ty: int, r: Rect2, _d: int) -> void:
-	var sim := m.sim
-	var f := 4.0 + sin(_t * 3.0 + tx * 0.7 + ty) * 1.5
-	var dry := func(x: int, y: int) -> bool:
-		return x >= 0 and y >= 0 and x < sim.width and y < sim.height and sim.level - sim.heights[y * sim.width + x] <= 0
-	if dry.call(tx, ty - 1):
-		board.draw_rect(Rect2(r.position, Vector2(r.size.x, f)), FOAM)
-	if dry.call(tx, ty + 1):
-		board.draw_rect(Rect2(r.position + Vector2(0, r.size.y - f), Vector2(r.size.x, f)), FOAM)
-	if dry.call(tx - 1, ty):
-		board.draw_rect(Rect2(r.position, Vector2(f, r.size.y)), FOAM)
-	if dry.call(tx + 1, ty):
-		board.draw_rect(Rect2(r.position + Vector2(r.size.x - f, 0), Vector2(f, r.size.y)), FOAM)
 
 
 func _draw_bars(e: MatchSim.Ent) -> void:
@@ -398,6 +388,14 @@ func _update_cutouts() -> void:
 		c.moving = c.position.distance_to(pos) > 0.6
 		c.position = pos
 		c.swimming = e.alive and not flyer and m.sim.depth_at(e.x, e.y) >= 1
+		if c.swimming and not _in_water.get(e.id, true):
+			fx.splash(_pos_px(e) + Vector2(0, 16), 0.7)
+		_in_water[e.id] = c.swimming
+		if c.swimming and c.moving:
+			_wake[e.id] = float(_wake.get(e.id, 0.0)) - get_process_delta_time()
+			if _wake[e.id] <= 0.0:
+				_wake[e.id] = 0.28
+				fx.ripple(_pos_px(e) + Vector2(0, 18))
 		c.facing = -1.0 if Fx.cos_a(e.aim) < 0 else 1.0
 		if not e.alive and c.is_gone():
 			c.visible = false
@@ -496,3 +494,23 @@ func _update_hud() -> void:
 	_special.theme_type_variation = "PlayButton" if ready else ""
 	_special.add_theme_font_size_override("font_size", 40)
 	_special.modulate.a = 1.0 if me.alive else 0.4
+
+
+## Ink blindness eases in while the player stands in an enemy cloud (the sim slows them there).
+func _update_blind(delta: float) -> void:
+	var me: MatchSim.Ent = m.sim.ents[m.human]
+	var inside := false
+	if me.alive:
+		for c in m.sim.clouds:
+			if c.owner != me.id and Vector2(c.x - me.x, c.y - me.y).length() <= c.radius + me.radius:
+				inside = true
+	_blind = move_toward(_blind, 1.0 if inside else 0.0, delta * (4.0 if inside else 2.0))
+
+
+## A number from an animal's special in data/animals.json (first animal with that special kind).
+func _special_value(kind: String, key: String, fallback: int) -> int:
+	for a in m.sim.animals:
+		var sp: Dictionary = a.get("special", {})
+		if str(sp.get("kind", "")) == kind:
+			return int(sp.get(key, fallback))
+	return fallback

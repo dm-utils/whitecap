@@ -28,6 +28,8 @@ func _ready() -> void:
 	test_setting_declarations()
 	test_every_language_complete()
 	test_cutouts_build()
+	test_island_view()
+	test_fx_draw()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -330,6 +332,39 @@ func test_cutouts_build() -> void:
 		c.build(look[0], look[1])
 		check((c.joints.body.get_child(0) as Sprite2D).texture != null, "look %s builds" % look[1])
 		c.free()
+
+
+## The island shader gets the sim's heights exactly (one texel per tile), and the shown tide eases to the sim's.
+func test_island_view() -> void:
+	var img := IslandView.height_image(3, 2, [0, 1, 2, 3, 9, 10])
+	var ok := true
+	for i in 6:
+		var v := roundi(img.get_pixel(i % 3, i / 3).r * 255.0 / IslandView.HEIGHT_SCALE)
+		ok = ok and v == [0, 1, 2, 3, 9, 10][i]
+	check(ok and img.get_format() == Image.FORMAT_R8, "island heights survive the round trip through the texture")
+	var m := Match.create(123, "crab", 6, "easy")
+	var view := IslandView.new().setup(m.sim, 80.0)
+	check(view.material is ShaderMaterial and (view.material as ShaderMaterial).get_shader_parameter("atlas") != null, "island has its shader and atlas")
+	m.sim.level += 1
+	view._process(IslandView.RISE_S / 2.0)
+	check(view.shown_level > m.sim.level - 1 and view.shown_level < m.sim.level, "water rises gradually on screen")
+	view._process(IslandView.RISE_S)
+	check(is_equal_approx(view.shown_level, float(m.sim.level)), "and then matches the sim")
+	view.free()
+	var world: Dictionary = Content.load_json("res://data/palette.json").world
+	# styleguide: shallow and deep water must also differ in brightness (colour-blind players)
+	check(Color(str(world.shallow)).get_luminance() - Color(str(world.deep)).get_luminance() > 0.25, "shallow is clearly lighter than deep")
+
+
+## Effects are view-only and finish by themselves.
+func test_fx_draw() -> void:
+	var fx := FxDraw.new()
+	fx.splash(Vector2(100, 100), 1.5)
+	fx.ripple(Vector2(50, 50))
+	check(fx.drops.size() > 5 and fx.rings.size() == 3, "a splash makes droplets and rings")
+	for i in 60:
+		fx.update(1.0 / 30.0)
+	check(fx.is_idle(), "splashes are gone after two seconds")
 
 
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).

@@ -75,6 +75,12 @@ jobs:
       - name: Tool tests (translation sync)
         run: python3 -I tools/test_i18n_sync.py
 
+      - name: Generated art is up to date (art comes from scripts; never edit the output by hand)
+        run: |
+          python3 -I tools/art/animals.py
+          git diff --exit-code -- assets/animals assets/looks data/rigs
+          python3 -I tools/art/tiles.py --check
+
       - name: Translations — push the source (develop), pull reviewed Final texts into this build
         env:
           I18N_URL: https://st33f-i18n-dev.st33fd3v.workers.dev
