@@ -72,6 +72,20 @@ jobs:
           curl -sf -X PUT -H "Content-Type: application/json" -H "X-Deploy-Key: $DEPLOY_KEY" \
             --data @data/settings_defs.json https://st33f-accounts-dev.st33fd3v.workers.dev/v1/games/getij/settings/defs
 
+      - name: Tool tests (translation sync)
+        run: python3 -I tools/test_i18n_sync.py
+
+      - name: Translations — push the source (develop), pull reviewed Final texts into this build
+        env:
+          I18N_URL: https://st33f-i18n-dev.st33fd3v.workers.dev
+          I18N_CLIENT_ID: ${{ secrets.I18N_ACCESS_CLIENT_ID }}
+          I18N_CLIENT_SECRET: ${{ secrets.I18N_ACCESS_CLIENT_SECRET }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/develop" ]; then python3 -I tools/i18n_sync.py push; fi
+          python3 -I tools/i18n_sync.py pull
+          # the CSV may have changed: re-import so the .translation files carry the Final texts
+          timeout 600 godot --headless --path . --import
+
       - name: Export Web and Windows
         run: |
           mkdir -p build/web build/windows build/android && touch build/.gdignore
