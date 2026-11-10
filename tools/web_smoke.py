@@ -160,7 +160,9 @@ def main() -> int:
                                    ("match", "&lang=nl&seed=123&god=1", "web-match-nl"), ("zoo", "", "web-zoo"),
                                    ("fx", "", "web-fx"), ("leaderboard", "&lang=nl", "web-leaderboard-nl"),
                                    ("leaderboard", "&lang=nl&dialog=friends", "web-friends-nl"),
-                                   ("settings", "&lang=nl&dialog=privacy", "web-privacy-nl")]:
+                                   ("settings", "&lang=nl&dialog=privacy", "web-privacy-nl"),
+                                   ("collection", "&lang=nl", "web-collection-nl"),
+                                   ("collection", "&lang=nl&detail=crab", "web-collection-detail-nl")]:
             page.goto(f"http://127.0.0.1:{port}/index.html?scene={scene}{extra}")
             try:
                 page.wait_for_selector("#loader.done", state="attached", timeout=60000)

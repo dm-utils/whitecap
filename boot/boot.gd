@@ -10,6 +10,7 @@ const SCENES := {
 	"zoo": "res://view/zoo.tscn",
 	"fx": "res://view/fx_review.tscn",
 	"leaderboard": "res://ui/leaderboard_screen.tscn",
+	"collection": "res://ui/collection_screen.tscn",
 }
 
 var args: Dictionary = {}

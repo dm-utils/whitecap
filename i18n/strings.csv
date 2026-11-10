@@ -198,3 +198,33 @@ PRIVACY_P7,Questions or a request? Mail privacy@steefbeest.nl or use Report a pr
 PRIVACY_FULL,Full privacy statement,Volledige privacyverklaring
 CONTROLS_TOUCH,Touch (phone, tablet),Aanraken (telefoon, tablet)
 HUD_CONTROLS_TOUCH,Left thumb: move · hold the orange button: attack · Special above it,Linkerduim: lopen · oranje knop vasthouden: aanvallen · Speciaal erboven
+SEASON_STORM,Storm Season,Stormseizoen
+REWARD_STORM_AVATAR,Storm cloud avatar,Stormwolk-avatar
+LOOK_GULL_STORM,Storm look for Skye,Storm-look voor Skye
+LOOK_CRAB_STORM,Storm look for Pinch,Storm-look voor Kees
+LOOK_OCTOPUS_STORM,Storm look for Inka,Storm-look voor Inka
+REWARD_STORM_RIDER,Storm Rider badge,Stormrijder-badge
+MENU_SEASON,{season}: {days} days left,{season}: nog {days} dagen
+RESULT_SEASON,{season}: {pearls} pearls,{season}: {pearls} parels
+RESULT_SEASON_NEXT,Next on {season}: {reward} at {at},Volgende in {season}: {reward} bij {at}
+COLLECTION_SOON,Coming soon,Binnenkort
+COLLECTION_SOON_LONG,This animal is on its way. It will be on the Treasure Path once it can play.,Dit dier is onderweg. Het staat op het Schattenpad zodra het kan meespelen.
+COLLECTION_FROM_PATH,Treasure Path: {at} pearls,Schattenpad: {at} parels
+COLLECTION_FROM_SEASON,{season}: {at} pearls,{season}: {at} parels
+COLLECTION_CHOSEN,Chosen,Gekozen
+COLLECTION_CHOOSE,Choose,Kiezen
+COLLECTION_ATTACK,Attack,Aanval
+COLLECTION_SPECIAL,Special,Speciaal
+COLLECTION_MASTERY,"Mastery: {tier} ({matches} matches, {wins} won)","Meesterschap: {tier} ({matches} potjes, {wins} gewonnen)"
+COLLECTION_NO_TIER,none yet,nog geen
+COLLECTION_LOOKS,Looks,Looks
+COLLECTION_STANDARD,Standard,Standaard
+ANIMAL_TYPE_LAND,"Land animal: fast on dry sand, slow in water.","Landdier: snel op droog zand, traag in het water."
+ANIMAL_TYPE_WATER,"Water animal: fast in shallow water, slower on land.","Waterdier: snel in ondiep water, trager op het land."
+ANIMAL_TYPE_FLYER,"Flyer: the same speed everywhere, but tires over deep water.","Vlieger: overal even snel, maar wordt moe boven diep water."
+ATTACK_DESC_SNIP,"a short, strong snip up close","een korte, harde knip dichtbij"
+ATTACK_DESC_FAN,three ink drops in a fan,drie inktdruppels in een waaier
+ATTACK_DESC_LONG,one fast peck from far away,één snelle pik van ver weg
+SPECIAL_DESC_DASH,a sideways dash that pushes others away,een zijwaartse sprint die anderen wegduwt
+SPECIAL_DESC_INK,an ink cloud that slows everyone inside,een inktwolk die iedereen erin vertraagt
+SPECIAL_DESC_DIVE,a dive onto a spot: a big splash after a moment,een duik op een plek: na een tel een grote plons

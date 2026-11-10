@@ -2,7 +2,8 @@ class_name ProfileMerge
 extends RefCounted
 ## Deterministic merge of two Getij profiles (local and server) after a 409:
 ##   counters        -> max          (pearls, stats, mastery, write counter)
-##   unlocks         -> union        (animals, owned looks), sorted
+##   unlocks         -> union        (animals, owned looks, badges, avatars), sorted
+##   seasons         -> max per season (pearls)
 ##   achievements    -> max tier per id
 ##   choices         -> last writer wins by updated_at (selected animal, equipped looks, settings, name)
 ## Same inputs always give the same result, so two devices converge.
@@ -35,6 +36,17 @@ static func merge(local: Dictionary, server: Dictionary) -> Dictionary:
 		var looks: Dictionary = (newer.get("looks", {}) as Dictionary).duplicate(true)
 		looks["owned"] = _union(local.get("looks", {}).get("owned", []), server.get("looks", {}).get("owned", []))
 		out["looks"] = looks
+
+	for k in ["badges", "avatars"]:
+		if local.has(k) or server.has(k):
+			out[k] = _union(local.get(k, []), server.get(k, []))
+	if local.has("seasons") or server.has("seasons"):
+		var seasons := {}
+		var ls: Dictionary = local.get("seasons", {})
+		var ss: Dictionary = server.get("seasons", {})
+		for id in _union(ls.keys(), ss.keys()):
+			seasons[id] = _max_each(ls.get(id, {}), ss.get(id, {}))
+		out["seasons"] = seasons
 
 	# a newer copy without a name (a fresh device) must not drop the name the player already has
 	if not out.has("name"):

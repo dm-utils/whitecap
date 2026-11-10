@@ -31,6 +31,8 @@ func _ready() -> void:
 		b.text = tr(key)
 		if key == "MENU_SETTINGS":
 			b.pressed.connect(func() -> void: get_tree().change_scene_to_file(Boot.SCENES["settings"]))
+		elif key == "MENU_COLLECTION":
+			b.pressed.connect(func() -> void: get_tree().change_scene_to_file(Boot.SCENES["collection"]))
 		elif key == "MENU_LEADERBOARD":
 			b.pressed.connect(func() -> void: get_tree().change_scene_to_file(Boot.SCENES["leaderboard"]))
 		else:
@@ -49,8 +51,9 @@ func _ready() -> void:
 	add_child(shadow)
 	var hero := Cutout.new()
 	hero.size_px = 380.0
+	hero.z_index = 5 # parts behind the body use negative z: keep them above the background
 	add_child(hero)
-	hero.build(str(animal.get("id", "octopus")))
+	hero.build(str(animal.get("id", "octopus")), Rewards.equipped_look(profile, str(animal.get("id", "octopus"))))
 	hero.position = Vector2(960, 650)
 
 	var name_label := Label.new()
@@ -102,6 +105,20 @@ func _ready() -> void:
 	play.text = tr("MENU_PLAY")
 	play.pressed.connect(_play)
 	right.add_child(play)
+
+	# the running season: name and days left (FO 7)
+	var season := Season.active(Time.get_unix_time_from_system())
+	if not season.is_empty():
+		var chip := Label.new()
+		chip.text = tr("MENU_SEASON").format({"season": tr(str(season.name_key)), "days": Season.days_left(season, Time.get_unix_time_from_system())})
+		chip.label_settings = UiTheme.heading(34, UiTheme.INK, 0)
+		add_child(chip)
+		chip.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+		chip.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		chip.offset_left = -600
+		chip.offset_right = -60
+		chip.offset_top = 96
+		chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 
 	var version := Label.new()
 	version.text = tr("MENU_VERSION").format({"version": ProjectSettings.get_setting("application/config/version")})

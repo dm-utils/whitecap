@@ -41,6 +41,7 @@ func _ready() -> void:
 	await test_my_data()
 	test_touch_and_safe_area()
 	test_perf_meter()
+	test_rewards_season_collection()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -679,6 +680,50 @@ func test_perf_meter() -> void:
 	check(absf(s.p95_ms - 50.0) < 0.01, "p95 sees the hitches (%.1f ms)" % s.p95_ms)
 	check(s.avg_ms > 19.0 and s.avg_ms < 20.5 and s.fps > 45.0, "average and fps (%.1f ms, %.0f fps)" % [s.avg_ms, s.fps])
 	p.free()
+
+
+## Every reward kind is kept; the season path fills alongside; looks are chosen per animal; the collection shows all.
+func test_rewards_season_collection() -> void:
+	var p := {"unlocked_animals": ["crab"], "selected_animal": "crab"}
+	for rew in [{"kind": "look", "id": "crab_sunset"}, {"kind": "badge", "id": "beachcomber"}, {"kind": "avatar", "id": "shell"}, {"kind": "animal", "id": "gull"}, {"kind": "look", "id": "crab_sunset"}]:
+		Rewards.grant(p, rew)
+	check(p.looks.owned == ["crab_sunset"] and p.badges == ["beachcomber"] and p.avatars == ["shell"] and p.unlocked_animals.has("gull"), "every reward kind is kept, no doubles")
+	check(Rewards.equipped_look(p, "crab") == "", "standard colours until a look is chosen")
+	Rewards.equip(p, "crab", "crab_sunset")
+	Rewards.equip(p, "gull", "gull_storm") # not owned
+	check(Rewards.equipped_look(p, "crab") == "crab_sunset" and Rewards.equipped_look(p, "gull") == "", "only owned looks are worn")
+
+	var nov12 := 1794488400.0 # 2026-11-12 13:00 UTC
+	var s := Season.active(nov12)
+	check(str(s.get("id", "")) == "storm-2026" and Season.days_left(s, nov12) == 81, "Storm Season runs, days left (%d)" % Season.days_left(s, nov12))
+	check(Season.active(1794315600.0 - 86400.0).is_empty(), "no season before it starts")
+	var q := {}
+	var r := Season.add_pearls(q, 210, nov12)
+	check(int(r.after) == 210 and q.seasons["storm-2026"].pearls == 210 and r.unlocked.size() == 2 and (q.looks.owned as Array).has("gull_storm"), "season pearls unlock the season rewards")
+	check(int(r.next.at) == 350, "next season reward")
+
+	var merged := ProfileMerge.merge({"updated_at": "b", "unlocked_animals": ["crab"], "seasons": {"storm-2026": {"pearls": 50}}, "badges": ["a"]},
+		{"updated_at": "a", "unlocked_animals": ["crab"], "seasons": {"storm-2026": {"pearls": 210}}, "badges": ["b"]})
+	check(merged.seasons["storm-2026"].pearls == 210 and merged.badges == ["a", "b"], "merge: season pearls max, badges union")
+
+	var screen = preload("res://ui/collection_screen.gd").new()
+	var all: Array = screen.entries()
+	check(all.size() == 8 and all.filter(func(e): return not e.built).size() == 5, "collection: 3 animals to play, 5 coming soon")
+	var crab_looks: Array = screen.looks_for("crab")
+	check(crab_looks.size() == 2 and crab_looks.any(func(l): return l.id == "crab_storm" and str(l.source).contains("350")), "crab looks with where to get them")
+	var box := VBoxContainer.new()
+	var shade := Control.new()
+	screen.fill_detail(box, "crab", shade)
+	check(box.get_child_count() >= 8, "detail: name, kind, attack, special, mastery, looks, buttons (%d)" % box.get_child_count())
+	for c in box.get_children():
+		c.free()
+	screen.fill_detail(box, "otter", shade)
+	check((box.get_child(1) as Label).text == tr("COLLECTION_SOON_LONG"), "an animal that isn't built yet says so")
+	for c in box.get_children():
+		c.free()
+	box.free()
+	shade.free()
+	screen.free()
 
 
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).

@@ -89,7 +89,8 @@ func _ready() -> void:
 		var c := Cutout.new()
 		c.size_px = ANIMAL_PX
 		actors.add_child(c)
-		c.build(str(m.sim.animals[e.id].id))
+		var id := str(m.sim.animals[e.id].id)
+		c.build(id, Rewards.equipped_look(profile, id) if e.id == m.human else "") # the player wears their look
 		_cutouts[e.id] = c
 	overlay = Node2D.new()
 	overlay.z_index = 2

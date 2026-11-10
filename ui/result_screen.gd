@@ -89,6 +89,15 @@ func _ready() -> void:
 	inner.add_child(_label(next_text, null))
 	for rew in outcome.unlocked:
 		inner.add_child(_label(tr("RESULT_UNLOCKED").format({"reward": tr(str(rew.name_key))}), UiTheme.heading(36, UiTheme.GOLD, 8)))
+	if not (outcome.season as Dictionary).is_empty():
+		var sn: Dictionary = outcome.season
+		var sname := tr(str(sn.season.name_key))
+		var line := tr("RESULT_SEASON").format({"season": sname, "pearls": int(sn.after)})
+		if not (sn.next as Dictionary).is_empty():
+			line = tr("RESULT_SEASON_NEXT").format({"season": sname, "reward": tr(str(sn.next.name_key)), "at": int(sn.next.at)})
+		inner.add_child(_label(line, null))
+		for rew in sn.unlocked:
+			inner.add_child(_label(tr("RESULT_UNLOCKED").format({"reward": tr(str(rew.name_key))}), UiTheme.heading(36, UiTheme.GOLD, 8)))
 	if int(outcome.mastery_up) > 0:
 		inner.add_child(_label(tr("RESULT_MASTERY").format({"tier": Mastery.tier_name(int(outcome.mastery_up)),
 			"animal": tr(str(Content.animal(str(r.animal)).get("name_key", "")))}), UiTheme.heading(36, UiTheme.GOLD, 8)))
@@ -155,22 +164,18 @@ static func apply_result(r: Dictionary) -> Dictionary:
 	mastery[str(r.animal)] = mine
 	p["mastery"] = mastery
 	var tier_after := Mastery.tier(mine)
-	var unlocked: Array = []
-	var next: Dictionary = {}
-	var prev_at := 0
-	for rew in path.rewards:
-		if int(rew.at) > before and int(rew.at) <= after:
-			unlocked.append(rew)
-			if str(rew.kind) == "animal" and not (p.unlocked_animals as Array).has(str(rew.id)):
-				p.unlocked_animals.append(str(rew.id))
-		if int(rew.at) <= after:
-			prev_at = int(rew.at)
-		elif next.is_empty():
-			next = rew
+	var w := Rewards.walk(path.rewards, before, after)
+	var unlocked: Array = w.unlocked
+	var next: Dictionary = w.next
+	var prev_at := int(w.prev_at)
+	for rew in unlocked:
+		Rewards.grant(p, rew) # every kind: animal, look, badge, avatar
+	# the season path fills with the same pearls (FO 7: a second free path)
+	var season := Season.add_pearls(p, earned, float(r.get("now", Time.get_unix_time_from_system())))
 	Platform.save_profile(p)
 	var span := float(int(next.get("at", after)) - prev_at)
 	var progress_after := 1.0 if next.is_empty() else (after - prev_at) / maxf(1.0, span)
 	var progress_before := clampf((before - prev_at) / maxf(1.0, span), 0.0, 1.0) if unlocked.is_empty() else 0.0
 	return {"earned": earned, "before": before, "after": after, "unlocked": unlocked, "next": next,
-		"mastery_up": tier_after if tier_after > tier_before else 0,
+		"mastery_up": tier_after if tier_after > tier_before else 0, "season": season,
 		"progress_before": progress_before, "progress_after": progress_after}

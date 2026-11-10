@@ -50,6 +50,25 @@
       "base": "#3B4BA8",
       "shade": "#2A3780",
       "accent": "#8FA0FF"
+    },
+    "crab_storm": {
+      "animal": "crab",
+      "base": "#5E7A8C",
+      "shade": "#455E6E",
+      "accent": "#BFD6E3"
+    },
+    "octopus_storm": {
+      "animal": "octopus",
+      "base": "#4F6B7A",
+      "shade": "#3A5260",
+      "accent": "#9FE3F0"
+    },
+    "gull_storm": {
+      "animal": "gull",
+      "base": "#C9D3DC",
+      "shade": "#9AA8B5",
+      "accent": "#6E7F8F",
+      "beak": "#F2C14E"
     }
   }
 }
