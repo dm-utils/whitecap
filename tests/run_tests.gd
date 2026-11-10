@@ -40,6 +40,7 @@ func _ready() -> void:
 	test_names_mastery_profiles()
 	await test_my_data()
 	test_touch_and_safe_area()
+	test_perf_meter()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -667,6 +668,17 @@ func test_touch_and_safe_area() -> void:
 	check(is_equal_approx(i.left, 70.4) and is_equal_approx(i.right, 70.4) and is_zero_approx(i.top) and is_equal_approx(i.bottom, 63.0), "notch + home bar as insets in viewport units (%s)" % str(i))
 	check(SafeArea.from_rects(Rect2(0, 0, 1920, 1080), Vector2(1920, 1080), Vector2(1920, 1080)).left == 0.0, "desktop: no insets")
 	check(SafeArea.parse("40,20,40,30").bottom == 30.0, "debug safe=l,t,r,b")
+
+
+## Frame times: average and p95 over a rolling window (the slow frames are what you feel).
+func test_perf_meter() -> void:
+	var p := PerfMeter.new()
+	for i in 300:
+		p.add(1.0 / 60.0 if i % 10 != 0 else 0.05) # every 10th frame is a 50 ms hitch (10 % > the 5 % above p95)
+	var s := p.stats()
+	check(absf(s.p95_ms - 50.0) < 0.01, "p95 sees the hitches (%.1f ms)" % s.p95_ms)
+	check(s.avg_ms > 19.0 and s.avg_ms < 20.5 and s.fps > 45.0, "average and fps (%.1f ms, %.0f fps)" % [s.avg_ms, s.fps])
+	p.free()
 
 
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).

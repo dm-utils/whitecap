@@ -22,6 +22,7 @@ var _cutouts := {} # id -> Cutout
 var hud: Control
 var controls := "keys" # keys | mouse | touch
 var touch: TouchControls
+var perf: PerfMeter
 
 var _acc := 0.0
 var _prev := {} # id -> Vector2 (milli-tiles) at the previous tick
@@ -105,6 +106,8 @@ func _ready() -> void:
 	add_child(cam)
 	cam.make_current()
 	_build_hud()
+	perf = PerfMeter.new() # F3 or perf=1 shows it; the debug fps log uses it too
+	add_child(perf)
 	_say(tr("DROP_TITLE"), _intro)
 
 
@@ -149,7 +152,9 @@ func _process(delta: float) -> void:
 		_fps_t += delta
 		if _fps_t >= 5.0:
 			_fps_t = 0.0
-			print("fps %d tick %d t %.2f wall %d" % [Engine.get_frames_per_second(), m.sim.tick, _t, Time.get_ticks_msec()])
+			var ps: Dictionary = perf.stats()
+			print("fps %d tick %d t %.2f wall %d p95 %.1fms draws %d" % [Engine.get_frames_per_second(), m.sim.tick, _t, Time.get_ticks_msec(),
+				ps.p95_ms, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))])
 
 
 func _alpha() -> float:
