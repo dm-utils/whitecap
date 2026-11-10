@@ -50,6 +50,11 @@
     "radius": 650
   },
   "knockout_credit_ticks": 120,
+  "limits": {
+    "_note": "what the leaderboards service accepts: players per match, longest possible match",
+    "players": 6,
+    "max_seconds": 600
+  },
   "score": {
     "place": [1000, 700, 500, 350, 200, 100],
     "per_ko": 300,

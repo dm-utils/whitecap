@@ -1,2 +1,2 @@
-St33f Godot SDK, copied from dm-utils/st33f-engine@ec22f35 on 2026-11-10.
+St33f Godot SDK, copied from dm-utils/st33f-engine@2f1bc6e on 2026-11-10.
 Do not edit here: change packages/godot-sdk in st33f-engine and copy again.

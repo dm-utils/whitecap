@@ -77,6 +77,16 @@ jobs:
           curl -sf -X PUT -H "Content-Type: application/json" -H "X-Deploy-Key: $DEPLOY_KEY" \
             --data @data/settings_defs.json https://st33f-accounts-dev.st33fd3v.workers.dev/v1/games/getij/settings/defs
 
+      - name: Push the score rules to the dev leaderboards (develop only, needs the deploy key)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        env:
+          DEPLOY_KEY: ${{ secrets.ST33F_DEPLOY_KEY_DEV }}
+        run: |
+          if [ -z "$DEPLOY_KEY" ]; then echo "::notice::ST33F_DEPLOY_KEY_DEV not set yet; skipping"; exit 0; fi
+          python3 -c "import json; r = json.load(open('data/rules.json')); print(json.dumps({'score': r['score'], 'limits': r['limits']}))" > "$RUNNER_TEMP/rules.json"
+          curl -sf -X PUT -H "Content-Type: application/json" -H "X-Deploy-Key: $DEPLOY_KEY" \
+            --data @"$RUNNER_TEMP/rules.json" https://st33f-leaderboards-dev.st33fd3v.workers.dev/v1/games/getij/rules
+
       - name: Tool tests (translation sync)
         run: python3 -I tools/test_i18n_sync.py
 

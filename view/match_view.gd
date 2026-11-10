@@ -294,14 +294,13 @@ func _say(text: String, seconds: float) -> void:
 
 
 func _finish() -> void:
-	var me: MatchSim.Ent = m.sim.ents[m.human]
-	var place := me.place if me.place > 0 else 1
-	Boot.last_result = {
-		"place": place, "kos": me.kos, "animal": str(m.sim.animals[me.id].id), "seed": m.sim.seed_value,
-		"survived_s": (me.died_tick if me.died_tick >= 0 else m.sim.tick) / 30, "players": m.sim.ents.size(),
-	}
+	Boot.last_result = m.human_result()
+	Boot.last_result["bots"] = m.bot_level
+	Boot.last_result["replay"] = Replay.encode(m.replay)
 	if _plan.has("daily"):
 		Boot.last_result["daily"] = _plan.daily
+	if _plan.has("run"): # a counted run (week board): token from the leaderboards service
+		Boot.last_result["run"] = _plan.run
 	get_tree().change_scene_to_file(RESULT_SCENE)
 
 

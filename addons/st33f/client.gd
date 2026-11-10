@@ -153,3 +153,16 @@ func get_daily() -> Dictionary:
 ## the score, so the server knows it handed out this seed to this player.
 func start_run(board: String) -> Dictionary:
 	return await call_api(HTTPClient.METHOD_POST, "/v1/games/%s/runs" % game, {"board": board}, true, "leaderboards")
+
+
+## Send a score for a run (signed in): {id, board, score, status: "pending"}. The server computes the score from the
+## result with the game's rules and lists it as pending until the replay check has played the match again.
+func submit_score(run_token: String, result: Dictionary, animal: String, bots: String, replay: Dictionary) -> Dictionary:
+	var body := {"token": run_token, "result": result, "animal": animal, "bots": bots, "replay": replay}
+	return await call_api(HTTPClient.METHOD_POST, "/v1/games/%s/scores" % game, body, true, "leaderboards")
+
+
+## A board ("day", "week", "day:<date>", "week:<iso week>"): {board, players, entries: [{rank, player, score,
+## pending}], me}. Signed in, "me" holds the player's own place even outside the top 50.
+func get_board(board: String) -> Dictionary:
+	return await call_api(HTTPClient.METHOD_GET, "/v1/games/%s/boards/%s" % [game, board], null, token != "", "leaderboards")

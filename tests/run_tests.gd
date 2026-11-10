@@ -33,6 +33,9 @@ func _ready() -> void:
 	test_fx_draw()
 	test_sfx()
 	test_daily()
+	test_replay()
+	test_leaderboard_rows()
+	test_sdk_has_what_the_game_calls()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -404,6 +407,102 @@ func test_daily() -> void:
 	check(r.best == 800 and not r.improved and r.profile.daily.plays == 2, "a worse try keeps the best")
 	r = Daily.record(r.profile, "2026-11-11", 300)
 	check(r.best == 300 and r.profile.daily.plays == 1, "a new day starts over")
+
+
+## A replay plays the whole match again: same commands, same result and state hash. Anything changed is caught.
+func test_replay() -> void:
+	# a "player" who only reads the sim, like real input (BotBrain draws from sim.rng, so it can't stand in)
+	var m := Match.create(4242, "crab", 6, "normal")
+	while not (m.finished() or m.human_out()):
+		m.step(_player_cmd(m.sim, m.sim.ents[m.human]))
+	var claimed := m.human_result()
+	var rep := Replay.encode(m.replay)
+	check(rep.ticks == m.replay.size() and rep.rle.size() <= rep.ticks, "replay is run-length encoded (%d ticks, %d runs, %d bytes)" % [rep.ticks, rep.rle.size(), JSON.stringify(rep).length()])
+	check(JSON.stringify(rep).length() * 5400 / maxi(1, rep.ticks) < 256 * 1024, "a 3-minute replay fits the 256 KB limit of the service")
+	check(Replay.decode(rep).size() == rep.ticks, "decode gives one command per tick")
+	var t0 := Time.get_ticks_msec()
+	var ok := Replay.check(4242, "crab", "normal", rep, claimed)
+	var ms := Time.get_ticks_msec() - t0
+	check(ok.ok and ok.hash == m.sim.state_hash(), "replay gives the same result and state hash (%s, %d ms for %d ticks)" % [ok.reason, ms, rep.ticks])
+	var wrong := claimed.duplicate()
+	wrong.kos = int(claimed.kos) + 1
+	check(Replay.check(4242, "crab", "normal", rep, wrong).reason == "result_mismatch", "a claimed extra knockout is caught")
+	check(not Replay.check(4243, "crab", "normal", rep, claimed).ok, "another seed does not give the same match")
+	check(not Replay.check(4242, "gull", "normal", rep, claimed).ok, "another animal does not give the same match")
+	var short := Replay.encode(m.replay.slice(0, m.replay.size() - 40))
+	check(Replay.check(4242, "crab", "normal", short, claimed).reason == "match_not_over", "a cut replay is caught")
+	var long := Replay.encode(m.replay + [[-1, -1, -1, -1]])
+	check(Replay.check(4242, "crab", "normal", long, claimed).reason == "replay_after_end", "commands after the end are caught")
+	var tampered := rep.duplicate(true)
+	tampered.ticks += 1
+	check(Replay.check(4242, "crab", "normal", tampered, claimed).reason == "bad_replay", "ticks that do not add up are caught")
+	check(Replay.check(4242, "shark", "normal", rep, claimed).reason == "bad_setup", "unknown animal is refused")
+
+
+## Test player: heads for the middle of the island, attacks the nearest animal, uses the special now and then.
+func _player_cmd(sim: MatchSim, me: MatchSim.Ent) -> Dictionary:
+	var target: MatchSim.Ent = null
+	var best := 1 << 40
+	for e in sim.ents:
+		if e.alive and e.id != me.id:
+			var d: int = (e.x - me.x) * (e.x - me.x) + (e.y - me.y) * (e.y - me.y)
+			if d < best:
+				best = d
+				target = e
+	var cx := sim.width * MatchSim.TILE / 2
+	var cy := sim.height * MatchSim.TILE / 2
+	var cmd := {"m": Fx.atan2_a(cy - me.y, cx - me.x) if absi(cx - me.x) + absi(cy - me.y) > 3000 else (sim.tick * 7) % Fx.ANGLES, "a": -1, "s": -1}
+	if target != null:
+		var aim := Fx.atan2_a(target.y - me.y, target.x - me.x)
+		cmd.a = aim
+		if sim.tick % 240 == 0:
+			cmd.s = aim
+			cmd["sd"] = Fx.dist(target.x - me.x, target.y - me.y)
+	return cmd
+
+
+## The leaderboard: one row per entry, own place added below the top when it is not in it, pending marked.
+func test_leaderboard_rows() -> void:
+	var screen = preload("res://ui/leaderboard_screen.gd").new()
+	screen._list = VBoxContainer.new()
+	screen._status = Label.new()
+	var data := {"board": "day:2026-11-10", "players": 30, "me": {"rank": 31, "player": "ffff0000", "score": 90, "pending": true},
+		"entries": [{"rank": 1, "player": "aaaa1111", "score": 2200, "pending": false}, {"rank": 2, "player": "bbbb2222", "score": 1800, "pending": true}]}
+	screen.fill(data)
+	check(screen._list.get_child_count() == 4, "two entries, a gap and my own place (%d rows)" % screen._list.get_child_count())
+	var pending_rows := 0
+	for row in screen._list.get_children():
+		for l in row.get_children():
+			if l is Label and l.text == tr("BOARD_PENDING"):
+				pending_rows += 1
+	check(pending_rows == 2, "pending scores are marked")
+	data.me = {"rank": 2, "player": "bbbb2222", "score": 1800, "pending": true}
+	screen.fill(data)
+	for c in screen._list.get_children():
+		screen._list.remove_child(c)
+		c.free()
+	screen.fill(data)
+	check(screen._list.get_child_count() == 2, "inside the top: no extra row")
+	screen.fill({"entries": [], "players": 0, "me": null})
+	check(screen._status.text.begins_with(tr("BOARD_EMPTY")), "empty board says so")
+	for c in screen._list.get_children():
+		c.free()
+	screen._list.free()
+	screen._status.free()
+	screen.free()
+
+
+## Every St33f client call the game makes exists in the copied SDK (a stale copy only fails at runtime otherwise).
+func test_sdk_has_what_the_game_calls() -> void:
+	var rx := RegEx.create_from_string("St33f[.]client[.]([a-z_]+)[(]")
+	var missing := []
+	for path in files_under("res://", [".gd"]):
+		if str(path).begins_with("res://addons/") or str(path).begins_with("res://tests/"):
+			continue
+		for m in rx.search_all(FileAccess.get_file_as_string(path)):
+			if not St33f.client.has_method(m.get_string(1)):
+				missing.append("%s in %s" % [m.get_string(1), path])
+	check(missing.is_empty(), "SDK has every client call the game makes (missing: %s)" % ", ".join(missing))
 
 
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).

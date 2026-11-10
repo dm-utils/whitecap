@@ -57,6 +57,22 @@ RESULT_MENU,Menu,Menu
 RESULT_DAILY_SCORE,Daily score {score} · best today {best},Dagscore {score} · beste vandaag {best}
 RESULT_DAILY_OFFLINE,Offline: this score does not count today.,Offline: deze score telt vandaag niet mee.
 RESULT_DAILY_SIGN_IN,Sign in to put your daily score on the leaderboard.,Log in om je dagscore op de ranglijst te zetten.
+RESULT_SENDING,Sending your score…,Score versturen…
+RESULT_SENT,"{score} points on the {board} board, checked soon","{score} punten op de {board}, wordt binnenkort nagekeken"
+RESULT_SEND_OFFLINE,No connection: this score was not sent.,Geen verbinding: deze score is niet verstuurd.
+RESULT_SEND_FAILED,Score not accepted ({reason}).,Score niet geaccepteerd ({reason}).
+BOARD_DAY,day leaderboard,dagranglijst
+BOARD_WEEK,week leaderboard,weekranglijst
+BOARD_TAB_DAY,Today,Vandaag
+BOARD_TAB_WEEK,This week,Deze week
+BOARD_LOADING,Loading…,Laden…
+BOARD_OFFLINE,The leaderboard could not be reached. Try again later.,De ranglijst is niet bereikbaar. Probeer het later nog eens.
+BOARD_EMPTY,No scores yet. Be the first!,Nog geen scores. Wees de eerste!
+BOARD_PLAYERS,{count} players,{count} spelers
+BOARD_SIGN_IN,Sign in (Settings) to get on the leaderboard.,Log in (Instellingen) om op de ranglijst te komen.
+BOARD_YOU,You,Jij
+BOARD_PLAYER,Player {id},Speler {id}
+BOARD_PENDING,being checked,wordt nagekeken
 PATH_COMPLETE,Path complete!,Pad voltooid!
 MENU_PEARLS,{count} pearls,{count} parels
 SETTINGS_TITLE,Settings,Instellingen

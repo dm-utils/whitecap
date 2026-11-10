@@ -58,5 +58,14 @@ func finished() -> bool:
 	return sim.finished == 1
 
 
+## The player's result, the same for the screen and for the replay check: {place, kos, animal, seed, survived_s, players}.
+func human_result() -> Dictionary:
+	var me: MatchSim.Ent = sim.ents[human]
+	return {
+		"place": me.place if me.place > 0 else 1, "kos": me.kos, "animal": str(sim.animals[me.id].id), "seed": sim.seed_value,
+		"survived_s": (me.died_tick if me.died_tick >= 0 else sim.tick) / 30, "players": sim.ents.size(),
+	}
+
+
 func human_out() -> bool:
 	return human >= 0 and not sim.ents[human].alive

@@ -6,6 +6,21 @@ var _bar: ProgressBar
 var _from := 0.0
 var _to := 0.0
 var _t := 0.0
+var _sent: Label
+
+
+## A counted run: send the result with the replay. The server lists it as pending until the replay check.
+func _send_score(r: Dictionary) -> void:
+	var res: Dictionary = await St33f.client.submit_score(str(r.run.token), {"place": int(r.place), "kos": int(r.kos), "survived_s": int(r.survived_s)},
+		str(r.animal), str(r.get("bots", "easy")), r.replay)
+	if not is_instance_valid(_sent):
+		return
+	if res.ok:
+		_sent.text = tr("RESULT_SENT").format({"score": int(res.data.get("score", 0)), "board": tr("BOARD_DAY") if str(r.run.board) == "day" else tr("BOARD_WEEK")})
+	elif res.error != null and res.error.code == "network":
+		_sent.text = tr("RESULT_SEND_OFFLINE")
+	else:
+		_sent.text = tr("RESULT_SEND_FAILED").format({"reason": res.error.code if res.error != null else "?"})
 
 
 func _ready() -> void:
@@ -38,6 +53,10 @@ func _ready() -> void:
 		var why := str(r.daily.get("why", ""))
 		if why != "":
 			box.add_child(_label(tr("RESULT_DAILY_OFFLINE") if why == "offline" else tr("RESULT_DAILY_SIGN_IN"), UiTheme.heading(32, UiTheme.INK, 0)))
+	if r.has("run"):
+		_sent = _label(tr("RESULT_SENDING"), UiTheme.heading(32, UiTheme.INK, 0))
+		box.add_child(_sent)
+		_send_score(r)
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(1000, 0)
@@ -83,8 +102,8 @@ func _ready() -> void:
 	again.text = tr("RESULT_AGAIN")
 	again.theme_type_variation = "PlayButton"
 	again.pressed.connect(func() -> void:
-		Boot.args["seed"] = str(randi() % 2000000000 + 1)
-		get_tree().change_scene_to_file(Boot.SCENES["match"]))
+		again.disabled = true
+		Daily.start_normal(get_tree()))
 	buttons.add_child(again)
 
 

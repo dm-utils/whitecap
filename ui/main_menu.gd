@@ -31,6 +31,8 @@ func _ready() -> void:
 		b.text = tr(key)
 		if key == "MENU_SETTINGS":
 			b.pressed.connect(func() -> void: get_tree().change_scene_to_file(Boot.SCENES["settings"]))
+		elif key == "MENU_LEADERBOARD":
+			b.pressed.connect(func() -> void: get_tree().change_scene_to_file(Boot.SCENES["leaderboard"]))
 		else:
 			b.pressed.connect(_soon)
 		menu.add_child(b)
@@ -161,5 +163,4 @@ func _play_daily() -> void:
 
 
 func _play() -> void:
-	Boot.args["seed"] = str(randi())
-	get_tree().change_scene_to_file(Boot.SCENES["match"])
+	Daily.start_normal(get_tree())

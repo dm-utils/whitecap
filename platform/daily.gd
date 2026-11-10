@@ -58,7 +58,7 @@ static func record(profile: Dictionary, day: String, points: int) -> Dictionary:
 
 
 ## Asks the service for today's seed (and a run token when signed in). Always returns a plan:
-## {seed, animal, bots, daily: {day, official, why, token}}.
+## {seed, animal, bots, daily: {day, official, why}, run?: {token, board}}.
 static func plan(now_unix: float) -> Dictionary:
 	var day := day_of(now_unix)
 	var seed_value := 0
@@ -75,5 +75,28 @@ static func plan(now_unix: float) -> Dictionary:
 	var why := "" if token != "" else ("sign_in" if seed_value != 0 else "offline")
 	if seed_value == 0:
 		seed_value = local_seed(day)
-	return {"seed": seed_value, "animal": animal_for(seed_value), "bots": BOTS,
-		"daily": {"day": day, "official": why == "", "why": why, "token": token}}
+	var plan := {"seed": seed_value, "animal": animal_for(seed_value), "bots": BOTS,
+		"daily": {"day": day, "official": why == "", "why": why}}
+	if token != "":
+		plan["run"] = {"token": token, "board": "day"}
+	return plan
+
+
+## Start a normal match (Play / Again): on the week board when signed in, else a local random seed.
+static func start_normal(tree: SceneTree) -> void:
+	var animal := str(Platform.load_profile().get("selected_animal", "octopus"))
+	var plan: Dictionary = await week_plan(animal)
+	if plan.is_empty():
+		Boot.args["seed"] = str(randi() % 2000000000 + 1)
+	Boot.next_match = plan
+	tree.change_scene_to_file(Boot.SCENES["match"])
+
+
+## A normal match on the week board: signed in, the seed comes with a run token so the score can count.
+## Not signed in or no service: a random seed and no run (the match is the same, it just does not count).
+static func week_plan(animal: String) -> Dictionary:
+	if St33f.client != null and St33f.is_signed_in():
+		var run: Dictionary = await St33f.client.start_run("week")
+		if run.ok and int(run.data.get("seed", 0)) > 0:
+			return {"seed": int(run.data.seed), "animal": animal, "bots": "easy", "run": {"token": str(run.data.token), "board": "week"}}
+	return {}
