@@ -98,7 +98,25 @@ def main() -> int:
         if shots:
             page.screenshot(path=f"{shots}/web-match-tide.png")
         fps = [line for line in console if line.startswith("fps ")]
-        print("match console:", "; ".join(fps[-3:]) or "no fps lines")
+        print("match console:", "; ".join(fps) or "no fps lines")
+
+        # settings (account, controls) and the report overlay (F8 anywhere)
+        page.goto(f"http://127.0.0.1:{port}/index.html?scene=settings")
+        try:
+            page.wait_for_selector("#loader.done", state="attached", timeout=60000)
+        except Exception:
+            failures.append("settings: engine did not start")
+        page.wait_for_timeout(1500)
+        if shots:
+            page.screenshot(path=f"{shots}/web-settings.png")
+        before = hashlib.sha256(page.screenshot(clip=top)).hexdigest()
+        page.mouse.click(640, 360)
+        page.keyboard.press("F8")
+        page.wait_for_timeout(1000)
+        if shots:
+            page.screenshot(path=f"{shots}/web-report.png")
+        if hashlib.sha256(page.screenshot(clip=top)).hexdigest() == before:
+            failures.append("F8 did not open the report overlay")
         browser.close()
     httpd.shutdown()
 

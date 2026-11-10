@@ -7,6 +7,7 @@ var _toast_t := 0.0
 
 func _ready() -> void:
 	theme = UiTheme.get_theme()
+	Platform.entered("menu")
 	var bg := TextureRect.new()
 	bg.texture = UiTheme.sky_gradient()
 	bg.stretch_mode = TextureRect.STRETCH_SCALE
@@ -26,7 +27,10 @@ func _ready() -> void:
 	for key in ["MENU_COLLECTION", "MENU_PATH", "MENU_LEADERBOARD", "MENU_PROFILE", "MENU_SETTINGS"]:
 		var b := Button.new()
 		b.text = tr(key)
-		b.pressed.connect(_soon)
+		if key == "MENU_SETTINGS":
+			b.pressed.connect(func() -> void: get_tree().change_scene_to_file(Boot.SCENES["settings"]))
+		else:
+			b.pressed.connect(_soon)
 		menu.add_child(b)
 
 	# centre: selected animal (art arrives in phase 6)

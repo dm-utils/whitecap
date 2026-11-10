@@ -36,6 +36,7 @@ var _t := 0.0
 
 
 func _ready() -> void:
+	Platform.entered("match")
 	var profile: Dictionary = Platform.load_profile()
 	var seed_value := Boot.seed_value() if Boot.seed_value() != 0 else randi() % 2000000000 + 1
 	var animal := str(Boot.args.get("animal", profile.get("selected_animal", "octopus")))

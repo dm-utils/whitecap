@@ -54,3 +54,45 @@ RESULT_AGAIN,Again
 RESULT_MENU,Menu
 PATH_COMPLETE,Path complete!
 MENU_PEARLS,{count} pearls
+SETTINGS_TITLE,Settings
+SETTINGS_CONTROLS,Controls (PC)
+CONTROLS_KEYS,Keyboard only (auto-aim)
+CONTROLS_MOUSE,Keyboard + mouse aim
+SETTINGS_ACCOUNT,Account
+ACCOUNT_GUEST,Playing as guest — your progress is only on this device.
+ACCOUNT_SIGNED_IN,Signed in as {email}
+ACCOUNT_SIGN_IN,Sign in to save progress
+ACCOUNT_SIGN_OUT,Sign out
+ACCOUNT_SIGN_OUT_ALL,Sign out everywhere
+SIGNIN_TITLE,Sign in
+SIGNIN_EMAIL_HINT,Sign in with your e-mail. We send you a 6-digit code — no password.
+SIGNIN_EMAIL_PLACEHOLDER,you@example.com
+SIGNIN_SEND,Send code
+SIGNIN_CODE_HINT,We sent a code to {email}. It is valid for 10 minutes.
+SIGNIN_CODE_PLACEHOLDER,6-digit code
+SIGNIN_VERIFY,Sign in
+SIGNIN_RESEND,Send again
+SIGNIN_RESEND_IN,Send again in {seconds}s
+SIGNIN_OTHER_ADDRESS,Use another address
+SIGNIN_DONE,Signed in — your progress is saved to the cloud.
+ERROR_INVALID_EMAIL,That does not look like an e-mail address.
+ERROR_INVALID_CODE,That code is not right or has expired.
+ERROR_RATE_LIMITED,Too many tries. Try again in {seconds}s.
+ERROR_MAIL_UNAVAILABLE,We can't send mail right now. Try again later.
+ERROR_NETWORK,No connection. Check your internet and try again.
+ERROR_GENERIC,Something went wrong. Try again.
+SETTINGS_REPORT,Report a problem
+REPORT_TITLE,Report a problem
+REPORT_HOTKEY,Tip: press F8 anywhere to report what you see.
+REPORT_CATEGORY_BUG,Bug
+REPORT_CATEGORY_IDEA,Idea
+REPORT_CATEGORY_OTHER,Other
+REPORT_TEXT_PLACEHOLDER,What happened? What did you expect?
+REPORT_ATTACH_SCREENSHOT,Add a screenshot of this moment
+REPORT_ATTACH_SAVE,Add my save (helps us reproduce it)
+REPORT_SEND,Send
+REPORT_CANCEL,Cancel
+REPORT_SENDING,Sending…
+REPORT_SENT,Thanks! We read every report.
+REPORT_SENT_NO_ATTACHMENTS,Thanks! Your report was sent, but the attachments could not be added.
+REPORT_EMPTY,Write a few words first.

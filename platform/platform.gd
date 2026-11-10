@@ -11,8 +11,47 @@ const RemoteBackend := preload("res://platform/remote_backend.gd")
 var backend: RefCounted
 
 
+const ReportOverlay := preload("res://ui/report_overlay.gd")
+
+
 func _ready() -> void:
 	backend = RemoteBackend.new(St33f)
+	if not OS.get_cmdline_user_args().has("--no-crash-reports"):
+		St33f.start_crash_reporting("boot")
+
+
+## Every main screen calls this, so an unclean exit can say where it happened.
+func entered(scene_name: String) -> void:
+	if St33f.crash != null and not OS.has_feature("web"):
+		St33f.crash.breadcrumb(scene_name)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F8:
+		open_report()
+		get_viewport().set_input_as_handled()
+
+
+## Opens "Report a problem" over the current screen, with a screenshot of this moment.
+func open_report() -> void:
+	if get_tree().root.has_node("ReportOverlay"):
+		return
+	var overlay = ReportOverlay.new()
+	overlay.name = "ReportOverlay"
+	overlay.screenshot = _screenshot_jpg()
+	get_tree().root.add_child(overlay)
+
+
+func _screenshot_jpg() -> PackedByteArray:
+	var tex := get_viewport().get_texture()
+	if tex == null:
+		return PackedByteArray()
+	var img := tex.get_image()
+	if img == null or img.is_empty():
+		return PackedByteArray()
+	if img.get_width() > 1280:
+		img.resize(1280, int(img.get_height() * 1280.0 / img.get_width()), Image.INTERPOLATE_BILINEAR)
+	return img.save_jpg_to_buffer(0.8)
 
 
 func is_signed_in() -> bool:

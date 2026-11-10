@@ -79,6 +79,33 @@ static func get_theme() -> Theme:
 
 	t.set_color("font_color", "Label", INK)
 	t.set_stylebox("panel", "PanelContainer", _box(PAPER, 6))
+
+	# text fields: white with an ink border (styleguide §7), readable placeholder
+	for type in ["LineEdit", "TextEdit"]:
+		var field := _box(Color.WHITE, 6)
+		field.set_corner_radius_all(16)
+		field.content_margin_left = 20
+		field.content_margin_right = 20
+		field.content_margin_top = 10
+		field.content_margin_bottom = 10
+		var focus := field.duplicate()
+		focus.border_color = BLUE
+		t.set_stylebox("normal", type, field)
+		t.set_stylebox("focus", type, focus)
+		t.set_stylebox("read_only", type, field)
+		t.set_color("font_color", type, INK)
+		t.set_color("font_placeholder_color", type, Color(INK, 0.45))
+		t.set_color("caret_color", type, INK)
+		t.set_color("selection_color", type, Color(BLUE, 0.35))
+
+	# check boxes: no button frame, just the box and the text
+	for state in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
+		t.set_stylebox(state, "CheckBox", StyleBoxEmpty.new())
+	t.set_font("font", "CheckBox", body_font())
+	t.set_font_size("font_size", "CheckBox", 32)
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
+		t.set_color(state, "CheckBox", INK)
+	t.set_constant("h_separation", "CheckBox", 16)
 	_theme = t
 	return t
 

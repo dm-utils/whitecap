@@ -6,6 +6,7 @@ extends Node
 const SCENES := {
 	"menu": "res://ui/main_menu.tscn",
 	"match": "res://view/match.tscn",
+	"settings": "res://ui/settings_screen.tscn",
 }
 
 var args: Dictionary = {}

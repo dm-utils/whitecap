@@ -10,6 +10,7 @@ var _t := 0.0
 
 func _ready() -> void:
 	theme = UiTheme.get_theme()
+	Platform.entered("result")
 	var bg := TextureRect.new()
 	bg.texture = UiTheme.sky_gradient()
 	bg.stretch_mode = TextureRect.STRETCH_SCALE

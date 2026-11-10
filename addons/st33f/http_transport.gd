@@ -12,11 +12,19 @@ func _init(host: Node) -> void:
 
 
 func request(method: int, url: String, headers: PackedStringArray, body: String) -> Dictionary:
+	return await _send(method, url, headers, body.to_utf8_buffer())
+
+
+func request_raw(method: int, url: String, headers: PackedStringArray, body: PackedByteArray) -> Dictionary:
+	return await _send(method, url, headers, body)
+
+
+func _send(method: int, url: String, headers: PackedStringArray, body: PackedByteArray) -> Dictionary:
 	var http := HTTPRequest.new()
 	http.timeout = timeout_s
 	http.use_threads = false
 	_host.add_child(http)
-	var err := http.request(url, headers, method, body)
+	var err := http.request_raw(url, headers, method, body)
 	if err != OK:
 		http.queue_free()
 		return {"status": 0, "body": ""}

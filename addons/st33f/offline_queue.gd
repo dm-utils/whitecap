@@ -22,8 +22,8 @@ func _init(p_client: St33fClient, p_path: String = "") -> void:
 	load_items()
 
 
-func enqueue(method: String, api_path: String, body: Dictionary, auth := true) -> void:
-	items.append({"method": method, "path": api_path, "body": body, "auth": auth, "tries": 0, "next_at": 0.0})
+func enqueue(method: String, api_path: String, body: Dictionary, auth := true, service := "accounts") -> void:
+	items.append({"method": method, "path": api_path, "body": body, "auth": auth, "service": service, "tries": 0, "next_at": 0.0})
 	while items.size() > max_items:
 		items.pop_front()
 	save_items()
@@ -42,7 +42,10 @@ func flush(now: float) -> int:
 	for item in items.duplicate():
 		if float(item.next_at) > now:
 			continue
-		var res: Dictionary = await client.call_api(METHODS.get(item.method, HTTPClient.METHOD_POST), item.path, item.body, item.auth)
+		if item.get("auth", true) and client.token == "":
+			continue # keep it until the player signs in again; never drop it for that
+		var res: Dictionary = await client.call_api(METHODS.get(item.method, HTTPClient.METHOD_POST), item.path, item.body, item.auth,
+			str(item.get("service", "accounts")))
 		if res.ok:
 			items.erase(item)
 			sent += 1

@@ -14,10 +14,19 @@ func _init(p_handler: Callable = Callable()) -> void:
 func request(method: int, url: String, headers: PackedStringArray, body: String) -> Dictionary:
 	var path := url.substr(url.find("/", url.find("://") + 3))
 	var parsed: Variant = JSON.parse_string(body) if body != "" else null
-	requests.append({"method": method, "path": path, "headers": headers, "body": parsed})
+	requests.append({"method": method, "path": path, "headers": headers, "body": parsed, "url": url})
 	if not handler.is_valid():
 		return {"status": 0, "body": ""}
 	var answer: Array = handler.call(method, path, headers, parsed)
+	return {"status": int(answer[0]), "body": JSON.stringify(answer[1]) if answer.size() > 1 and answer[1] != null else ""}
+
+
+func request_raw(method: int, url: String, headers: PackedStringArray, body: PackedByteArray) -> Dictionary:
+	var path := url.substr(url.find("/", url.find("://") + 3))
+	requests.append({"method": method, "path": path, "headers": headers, "body": null, "raw_size": body.size(), "url": url})
+	if not handler.is_valid():
+		return {"status": 0, "body": ""}
+	var answer: Array = handler.call(method, path, headers, {"raw_size": body.size()})
 	return {"status": int(answer[0]), "body": JSON.stringify(answer[1]) if answer.size() > 1 and answer[1] != null else ""}
 
 
