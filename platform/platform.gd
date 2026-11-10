@@ -16,11 +16,39 @@ const ReportOverlay := preload("res://ui/report_overlay.gd")
 
 func _ready() -> void:
 	backend = RemoteBackend.new(St33f)
+	apply_language()
 	var args := OS.get_cmdline_user_args()
 	if not args.has("--no-crash-reports"):
 		St33f.start_crash_reporting("boot")
 	if not args.has("--no-network"):
 		St33f.fetch_settings()
+
+
+const LANGUAGES := ["en", "nl"]
+
+
+## The player's choice, else the system language when we have it, else English. Debug entry: lang=nl.
+func language() -> String:
+	var chosen := str(load_profile().get("settings", {}).get("language", ""))
+	if Boot.args.has("lang"):
+		chosen = str(Boot.args.lang)
+	if LANGUAGES.has(chosen):
+		return chosen
+	var system := OS.get_locale_language()
+	return system if LANGUAGES.has(system) else "en"
+
+
+func apply_language() -> void:
+	TranslationServer.set_locale(language())
+
+
+func set_language(code: String) -> void:
+	var p := load_profile()
+	var s: Dictionary = p.get("settings", {})
+	s["language"] = code
+	p["settings"] = s
+	save_profile(p)
+	apply_language()
 
 
 ## Every main screen calls this, so an unclean exit can say where it happened.

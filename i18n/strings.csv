@@ -1,98 +1,99 @@
-keys,en
-TITLE,GETIJ
-BOOT_WORKING_TITLE,working title
-BOOT_TAP,Tap to start
-BOOT_LOADING,Loading…
-MENU_PLAY,PLAY
-MENU_DAILY,Daily Challenge
-MENU_COLLECTION,Collection
-MENU_PATH,Treasure Path
-MENU_LEADERBOARD,Leaderboard
-MENU_PROFILE,Profile
-MENU_SETTINGS,Settings
-MENU_COMING_SOON,Coming soon
-MENU_ANIMALS_LOADED,{count} animals ready
-MENU_VERSION,Version {version}
-COMMON_BACK,Back
-ANIMAL_CRAB,Pinch the Beach Crab
-ANIMAL_OCTOPUS,Inka the Octopus
-ANIMAL_GULL,Skye the Gull
-ANIMAL_PUFFER,Puff the Pufferfish
-ANIMAL_OTTER,Slick the Otter
-ANIMAL_SEAL,Bumper the Seal
-ANIMAL_HERMIT,Shelly the Hermit Crab
-ANIMAL_STAR,Twinkle the Starfish
-REWARD_SHELL_AVATAR,Shell avatar
-REWARD_BEACHCOMBER,Beachcomber badge
-REWARD_SUNSET_PINCH,Sunset Pinch look
-REWARD_WAVE_AVATAR,Wave avatar
-REWARD_MIDNIGHT_INKA,Midnight Inka look
-REWARD_TIDE_MASTER,Tide Master badge
-HUD_LEFT,{count} left
-HUD_TIDE,Tide {level}/{max}
-HUD_SPECIAL,SPECIAL
-HUD_TIDE_RISES,The tide rises!
-HUD_TIDE_WARNING,Tide coming in…
-HUD_SUDDEN_DEATH,Sudden death!
-HUD_WASHED_AWAY,Washed away!
-HUD_LAST_DRY,Last one dry!
-HUD_YOU,YOU
-HUD_CONTROLS_KEYS,WASD move · Space attack (auto-aim) · Shift special
-HUD_CONTROLS_MOUSE,WASD move · click attack · right-click special
-HUD_SKIP,Skip
-DROP_TITLE,Dropping in…
-RESULT_PLACE,#{place}
-RESULT_WIN,Last one dry!
-RESULT_CLOSE,So close — washed away near the end.
-RESULT_LOST,Washed away by the tide.
-RESULT_KOS,"{count} knockouts"
-RESULT_SURVIVED,{seconds}s survived
-RESULT_PEARLS,+{count} pearls
-RESULT_NEXT,Next: {reward} at {at}
-RESULT_UNLOCKED,New on your path: {reward}!
-RESULT_AGAIN,Again
-RESULT_MENU,Menu
-PATH_COMPLETE,Path complete!
-MENU_PEARLS,{count} pearls
-SETTINGS_TITLE,Settings
-SETTINGS_CONTROLS,Controls (PC)
-CONTROLS_KEYS,Keyboard only (auto-aim)
-CONTROLS_MOUSE,Keyboard + mouse aim
-SETTINGS_ACCOUNT,Account
-ACCOUNT_GUEST,Playing as guest — your progress is only on this device.
-ACCOUNT_SIGNED_IN,Signed in as {email}
-ACCOUNT_SIGN_IN,Sign in to save progress
-ACCOUNT_SIGN_OUT,Sign out
-ACCOUNT_SIGN_OUT_ALL,Sign out everywhere
-SIGNIN_TITLE,Sign in
-SIGNIN_EMAIL_HINT,Sign in with your e-mail. We send you a 6-digit code — no password.
-SIGNIN_EMAIL_PLACEHOLDER,you@example.com
-SIGNIN_SEND,Send code
-SIGNIN_CODE_HINT,We sent a code to {email}. It is valid for 10 minutes.
-SIGNIN_CODE_PLACEHOLDER,6-digit code
-SIGNIN_VERIFY,Sign in
-SIGNIN_RESEND,Send again
-SIGNIN_RESEND_IN,Send again in {seconds}s
-SIGNIN_OTHER_ADDRESS,Use another address
-SIGNIN_DONE,Signed in — your progress is saved to the cloud.
-ERROR_INVALID_EMAIL,That does not look like an e-mail address.
-ERROR_INVALID_CODE,That code is not right or has expired.
-ERROR_RATE_LIMITED,Too many tries. Try again in {seconds}s.
-ERROR_MAIL_UNAVAILABLE,We can't send mail right now. Try again later.
-ERROR_NETWORK,No connection. Check your internet and try again.
-ERROR_GENERIC,Something went wrong. Try again.
-SETTINGS_REPORT,Report a problem
-REPORT_TITLE,Report a problem
-REPORT_HOTKEY,Tip: press F8 anywhere to report what you see.
-REPORT_CATEGORY_BUG,Bug
-REPORT_CATEGORY_IDEA,Idea
-REPORT_CATEGORY_OTHER,Other
-REPORT_TEXT_PLACEHOLDER,What happened? What did you expect?
-REPORT_ATTACH_SCREENSHOT,Add a screenshot of this moment
-REPORT_ATTACH_SAVE,Add my save (helps us reproduce it)
-REPORT_SEND,Send
-REPORT_CANCEL,Cancel
-REPORT_SENDING,Sending…
-REPORT_SENT,Thanks! We read every report.
-REPORT_SENT_NO_ATTACHMENTS,Thanks! Your report was sent, but the attachments could not be added.
-REPORT_EMPTY,Write a few words first.
+keys,en,nl
+TITLE,GETIJ,GETIJ
+BOOT_WORKING_TITLE,working title,werktitel
+BOOT_TAP,Tap to start,Tik om te beginnen
+BOOT_LOADING,Loading…,Laden…
+MENU_PLAY,PLAY,SPELEN
+MENU_DAILY,Daily Challenge,Dagelijkse uitdaging
+MENU_COLLECTION,Collection,Collectie
+MENU_PATH,Treasure Path,Schattenpad
+MENU_LEADERBOARD,Leaderboard,Ranglijst
+MENU_PROFILE,Profile,Profiel
+MENU_SETTINGS,Settings,Instellingen
+MENU_COMING_SOON,Coming soon,Binnenkort
+MENU_ANIMALS_LOADED,{count} animals ready,{count} dieren klaar
+MENU_VERSION,Version {version},Versie {version}
+COMMON_BACK,Back,Terug
+ANIMAL_CRAB,Pinch the Beach Crab,Kees de Strandkrab
+ANIMAL_OCTOPUS,Inka the Octopus,Inka de Octopus
+ANIMAL_GULL,Skye the Gull,Skye de Meeuw
+ANIMAL_PUFFER,Puff the Pufferfish,Puf de Kogelvis
+ANIMAL_OTTER,Slick the Otter,Glij de Otter
+ANIMAL_SEAL,Bumper the Seal,Bonk de Zeehond
+ANIMAL_HERMIT,Shelly the Hermit Crab,Schelpje de Heremietkreeft
+ANIMAL_STAR,Twinkle the Starfish,Twinkel de Zeester
+REWARD_SHELL_AVATAR,Shell avatar,Schelp-avatar
+REWARD_BEACHCOMBER,Beachcomber badge,Jutter-badge
+REWARD_SUNSET_PINCH,Sunset Pinch look,Zonsondergang-look voor Kees
+REWARD_WAVE_AVATAR,Wave avatar,Golf-avatar
+REWARD_MIDNIGHT_INKA,Midnight Inka look,Middernacht-look voor Inka
+REWARD_TIDE_MASTER,Tide Master badge,Getijmeester-badge
+HUD_LEFT,{count} left,nog {count}
+HUD_TIDE,Tide {level}/{max},Getij {level}/{max}
+HUD_SPECIAL,SPECIAL,SPECIAAL
+HUD_TIDE_RISES,The tide rises!,Het water stijgt!
+HUD_TIDE_WARNING,Tide coming in…,Het water komt op…
+HUD_SUDDEN_DEATH,Sudden death!,Sudden death!
+HUD_WASHED_AWAY,Washed away!,Weggespoeld!
+HUD_LAST_DRY,Last one dry!,Als laatste droog!
+HUD_YOU,YOU,JIJ
+HUD_CONTROLS_KEYS,WASD move · Space attack (auto-aim) · Shift special,WASD lopen · Spatie aanvallen (richt zelf) · Shift speciaal
+HUD_CONTROLS_MOUSE,WASD move · click attack · right-click special,WASD lopen · klik aanvallen · rechtsklik speciaal
+HUD_SKIP,Skip,Overslaan
+DROP_TITLE,Dropping in…,Invallen…
+RESULT_PLACE,#{place},#{place}
+RESULT_WIN,Last one dry!,Als laatste droog!
+RESULT_CLOSE,So close — washed away near the end.,Bijna — vlak voor het eind weggespoeld.
+RESULT_LOST,Washed away by the tide.,Weggespoeld door het getij.
+RESULT_KOS,{count} knockouts,{count} uitgeschakeld
+RESULT_SURVIVED,{seconds}s survived,{seconds} s overleefd
+RESULT_PEARLS,+{count} pearls,+{count} parels
+RESULT_NEXT,Next: {reward} at {at},Volgende: {reward} bij {at}
+RESULT_UNLOCKED,New on your path: {reward}!,Nieuw op je pad: {reward}!
+RESULT_AGAIN,Again,Nog een keer
+RESULT_MENU,Menu,Menu
+PATH_COMPLETE,Path complete!,Pad voltooid!
+MENU_PEARLS,{count} pearls,{count} parels
+SETTINGS_TITLE,Settings,Instellingen
+SETTINGS_CONTROLS,Controls (PC),Besturing (pc)
+CONTROLS_KEYS,Keyboard only (auto-aim),Alleen toetsenbord (richt zelf)
+CONTROLS_MOUSE,Keyboard + mouse aim,Toetsenbord + muis richten
+SETTINGS_ACCOUNT,Account,Account
+ACCOUNT_GUEST,Playing as guest — your progress is only on this device.,Je speelt als gast — je voortgang staat alleen op dit apparaat.
+ACCOUNT_SIGNED_IN,Signed in as {email},Ingelogd als {email}
+ACCOUNT_SIGN_IN,Sign in to save progress,Log in om je voortgang te bewaren
+ACCOUNT_SIGN_OUT,Sign out,Uitloggen
+ACCOUNT_SIGN_OUT_ALL,Sign out everywhere,Overal uitloggen
+SIGNIN_TITLE,Sign in,Inloggen
+SIGNIN_EMAIL_HINT,Sign in with your e-mail. We send you a 6-digit code — no password.,Log in met je e-mailadres. We sturen je een code van 6 cijfers — geen wachtwoord.
+SIGNIN_EMAIL_PLACEHOLDER,you@example.com,jij@voorbeeld.nl
+SIGNIN_SEND,Send code,Stuur code
+SIGNIN_CODE_HINT,We sent a code to {email}. It is valid for 10 minutes.,We hebben een code gestuurd naar {email}. Die is 10 minuten geldig.
+SIGNIN_CODE_PLACEHOLDER,6-digit code,code van 6 cijfers
+SIGNIN_VERIFY,Sign in,Inloggen
+SIGNIN_RESEND,Send again,Opnieuw sturen
+SIGNIN_RESEND_IN,Send again in {seconds}s,Opnieuw sturen over {seconds} s
+SIGNIN_OTHER_ADDRESS,Use another address,Ander adres gebruiken
+SIGNIN_DONE,Signed in — your progress is saved to the cloud.,Ingelogd — je voortgang wordt in de cloud bewaard.
+ERROR_INVALID_EMAIL,That does not look like an e-mail address.,Dat lijkt geen e-mailadres.
+ERROR_INVALID_CODE,That code is not right or has expired.,Die code klopt niet of is verlopen.
+ERROR_RATE_LIMITED,Too many tries. Try again in {seconds}s.,Te veel pogingen. Probeer het over {seconds} s opnieuw.
+ERROR_MAIL_UNAVAILABLE,We can't send mail right now. Try again later.,We kunnen nu geen mail sturen. Probeer het later opnieuw.
+ERROR_NETWORK,No connection. Check your internet and try again.,Geen verbinding. Controleer je internet en probeer het opnieuw.
+ERROR_GENERIC,Something went wrong. Try again.,Er ging iets mis. Probeer het opnieuw.
+SETTINGS_REPORT,Report a problem,Probleem melden
+REPORT_TITLE,Report a problem,Probleem melden
+REPORT_HOTKEY,Tip: press F8 anywhere to report what you see.,Tip: druk overal op F8 om te melden wat je ziet.
+REPORT_CATEGORY_BUG,Bug,Fout
+REPORT_CATEGORY_IDEA,Idea,Idee
+REPORT_CATEGORY_OTHER,Other,Anders
+REPORT_TEXT_PLACEHOLDER,What happened? What did you expect?,Wat gebeurde er? Wat had je verwacht?
+REPORT_ATTACH_SCREENSHOT,Add a screenshot of this moment,Schermafbeelding van dit moment toevoegen
+REPORT_ATTACH_SAVE,Add my save (helps us reproduce it),Mijn save toevoegen (helpt ons het na te spelen)
+REPORT_SEND,Send,Versturen
+REPORT_CANCEL,Cancel,Annuleren
+REPORT_SENDING,Sending…,Versturen…
+REPORT_SENT,Thanks! We read every report.,Bedankt! We lezen elke melding.
+REPORT_SENT_NO_ATTACHMENTS,Thanks! Your report was sent, but the attachments could not be added.,"Bedankt! Je melding is verstuurd, maar de bijlagen konden niet mee."
+REPORT_EMPTY,Write a few words first.,Schrijf eerst een paar woorden.
+SETTINGS_LANGUAGE,Language,Taal

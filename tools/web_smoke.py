@@ -117,6 +117,18 @@ def main() -> int:
             page.screenshot(path=f"{shots}/web-report.png")
         if hashlib.sha256(page.screenshot(clip=top)).hexdigest() == before:
             failures.append("F8 did not open the report overlay")
+
+        # Dutch: texts are ~30 % longer, so the layouts must still fit (checked by eye in the contact sheet)
+        for scene, extra, name in [("menu", "", "web-menu-nl"), ("settings", "", "web-settings-nl"),
+                                   ("match", "&seed=123&god=1", "web-match-nl")]:
+            page.goto(f"http://127.0.0.1:{port}/index.html?scene={scene}&lang=nl{extra}")
+            try:
+                page.wait_for_selector("#loader.done", state="attached", timeout=60000)
+            except Exception:
+                failures.append(f"{name}: engine did not start")
+            page.wait_for_timeout(2500)
+            if shots:
+                page.screenshot(path=f"{shots}/{name}.png")
         browser.close()
     httpd.shutdown()
 

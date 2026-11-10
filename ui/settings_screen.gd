@@ -38,10 +38,11 @@ func _ready() -> void:
 
 	var panel := PanelContainer.new()
 	add_child(panel)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	# fixed distance below the title: the panel grows downward with longer texts (Dutch, German)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	panel.custom_minimum_size = Vector2(1100, 0)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	panel.position.y = 170
 	_box = VBoxContainer.new()
 	_box.add_theme_constant_override("separation", 22)
 	panel.add_child(_box)
@@ -58,6 +59,21 @@ func _ready() -> void:
 	controls.selected = 1 if str(profile.get("settings", {}).get("controls", "keys")) == "mouse" else 0
 	controls.item_selected.connect(_on_controls)
 	row.add_child(controls)
+
+	# language: names in their own language, never translated
+	var lang_row := HBoxContainer.new()
+	lang_row.add_theme_constant_override("separation", 30)
+	_box.add_child(lang_row)
+	lang_row.add_child(_heading(tr("SETTINGS_LANGUAGE")))
+	var lang := OptionButton.new()
+	var names := {"en": "English", "nl": "Nederlands"}
+	for code in Platform.LANGUAGES:
+		lang.add_item(names.get(code, code))
+	lang.selected = Platform.LANGUAGES.find(Platform.language())
+	lang.item_selected.connect(func(i: int) -> void:
+		Platform.set_language(Platform.LANGUAGES[i])
+		get_tree().reload_current_scene())
+	lang_row.add_child(lang)
 
 	# account
 	_box.add_child(_heading(tr("SETTINGS_ACCOUNT")))

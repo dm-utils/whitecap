@@ -15,9 +15,9 @@ boot_splash/bg_color=Color(0.498, 0.847, 0.941, 1)
 
 [autoload]
 
+Boot="*res://boot/boot.gd"
 St33f="*res://addons/st33f/st33f.gd"
 Platform="*res://platform/platform.gd"
-Boot="*res://boot/boot.gd"
 
 [display]
 
@@ -39,7 +39,7 @@ timers/tooltip_delay_sec.mobile=3600.0
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://i18n/strings.en.translation")
+locale/translations=PackedStringArray("res://i18n/strings.en.translation", "res://i18n/strings.nl.translation")
 locale/fallback="en"
 
 [physics]

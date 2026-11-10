@@ -26,6 +26,7 @@ func _ready() -> void:
 	test_result_bookkeeping()
 	test_every_asset_has_credits()
 	test_setting_declarations()
+	test_every_language_complete()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -309,6 +310,43 @@ func test_result_bookkeeping() -> void:
 	check(int(p.stats.matches) == 5 and int(p.stats.wins) == 4 and int(p.mastery.gull.matches) == 2, "stats and mastery counted")
 	DirAccess.remove_absolute(backend.profile_path)
 	backend.profile_path = saved_path
+
+
+## A new key goes into every language in the same change, with the same placeholders ({count} etc.).
+func test_every_language_complete() -> void:
+	var f := FileAccess.open("res://i18n/strings.csv", FileAccess.READ)
+	var header := f.get_csv_line()
+	var langs := []
+	for i in range(1, header.size()):
+		if not header[i].begins_with("_"):
+			langs.append(i)
+	check(langs.size() >= 2, "strings.csv has at least two languages (%s)" % ", ".join(header))
+	var rx := RegEx.create_from_string("\\{[a-z_]+\\}")
+	var problems := []
+	while not f.eof_reached():
+		var row := f.get_csv_line()
+		if row.size() < 2 or row[0] == "":
+			continue
+		var en_ph := _placeholders(rx, row[1])
+		for i in langs:
+			var text: String = row[i] if i < row.size() else ""
+			if text.strip_edges() == "":
+				problems.append("%s has no %s text" % [row[0], header[i]])
+			elif _placeholders(rx, text) != en_ph:
+				problems.append("%s: placeholders differ in %s" % [row[0], header[i]])
+	check(problems.is_empty(), "every key translated with matching placeholders: " + "; ".join(problems))
+	TranslationServer.set_locale("nl")
+	check(tr("MENU_PLAY") == "SPELEN", "the Dutch translation is loaded")
+	TranslationServer.set_locale("en")
+	check(tr("MENU_PLAY") == "PLAY", "English is back")
+
+
+func _placeholders(rx: RegEx, text: String) -> Array:
+	var out := []
+	for m in rx.search_all(text):
+		out.append(m.get_string())
+	out.sort()
+	return out
 
 
 ## The same checks the server applies when CI pushes the declarations, so a bad one fails here first.
