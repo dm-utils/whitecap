@@ -19,6 +19,12 @@ func _ready() -> void:
 	test_debug_args()
 	test_profile_merge()
 	await test_remote_backend()
+	test_fx_and_rng()
+	test_sim_rules()
+	test_determinism()
+	test_golden_traces()
+	test_result_bookkeeping()
+	test_every_asset_has_credits()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -152,6 +158,164 @@ func test_remote_backend() -> void:
 	check(r.ok and puts.size() == 1 and int(server.profile.pearls_total) == 80, "upload sends the merged profile")
 	DirAccess.remove_absolute(b.profile_path)
 	node.queue_free()
+
+
+func test_fx_and_rng() -> void:
+	check(Fx.sin_a(0) == 0 and Fx.sin_a(1024) == 1024 and Fx.cos_a(0) == 1024 and Fx.sin_a(3072) == -1024, "sin table cardinal points")
+	var worst := 0
+	for a in range(0, 4096, 37):
+		worst = maxi(worst, absi(Fx.angle_diff(Fx.atan2_a(Fx.sin_a(a) * 100, Fx.cos_a(a) * 100), a)))
+	check(worst <= 2, "atan2 inverts sin/cos within 2 units (worst %d)" % worst)
+	check(Fx.isqrt(0) == 0 and Fx.isqrt(15) == 3 and Fx.isqrt(16) == 4 and Fx.isqrt(1_000_000) == 1000, "integer sqrt")
+	var r := SimRng.new(1)
+	# pinned values: the C++ port must produce exactly these
+	check(r.next_u32() == 270369 and r.next_u32() == 67634689, "xorshift32 reference values")
+
+
+## A two-player sim with both entrants placed by hand.
+func _duel(a: String, b: String) -> MatchSim:
+	var s := MatchSim.new(42, [a, b])
+	s.projs.clear()
+	s.snacks.clear()
+	s.ents[0].x = 14 * 1000 + 500
+	s.ents[0].y = 12 * 1000 + 500
+	s.ents[1].x = 14 * 1000 + 500
+	s.ents[1].y = 12 * 1000 + 500 + 6000 # 6 tiles south
+	return s
+
+
+func test_sim_rules() -> void:
+	var s := _duel("crab", "gull")
+	var e0: MatchSim.Ent = s.ents[0]
+	var x0 := e0.x
+	for i in 5:
+		s.step([{"m": 0}, {}])
+	check(e0.x - x0 == 5 * (120 * 108 / 100), "land animal on dry sand moves 129 milli-tiles per tick (got %d)" % (e0.x - x0))
+
+	s = _duel("crab", "gull")
+	s.ents[0].x = 4 * 1000 + 500
+	s.ents[0].y = 4 * 1000 + 500
+	var hp := int(s.ents[0].hp)
+	for i in 30:
+		s.step([{}, {}])
+	check(hp - int(s.ents[0].hp) == 30 * 30, "deep water costs a land animal 30 hp-units per tick")
+
+	s = _duel("gull", "crab")
+	var shots := 0
+	for i in 40:
+		var before := s.projs.size()
+		s.step([{"a": 1024}, {}])
+		if s.projs.size() > before or s.events.any(func(ev): return ev.type == "attack"):
+			shots += 1
+	check(shots == 3 + 1, "3 charges, then one more after a 29-tick reload within 40 ticks (got %d)" % shots)
+
+	s = _duel("gull", "crab")
+	var target_hp := int(s.ents[1].hp)
+	for i in 15:
+		s.step([{"a": 1024} if i == 0 else {}, {}])
+	check(target_hp - int(s.ents[1].hp) == 2100 and int(s.ents[0].special) == 1, "a hit deals the attack damage and charges the special")
+
+	s = _duel("gull", "crab")
+	s.ents[1].hp = 1
+	for i in 15:
+		s.step([{"a": 1024} if i == 0 else {}, {}])
+	check(not s.ents[1].alive and s.ents[1].place == 2 and s.ents[0].place == 1 and s.ents[0].kos == 1 and s.finished == 1,
+		"knockout: places 1 and 2, KO credited, match finished")
+
+	s = _duel("crab", "gull")
+	var lvl := s.level
+	var rose := false
+	for i in int(s.rules.tide.phase_ticks):
+		s.step([{}, {}])
+		rose = rose or s.events.any(func(ev): return ev.type == "tide_rise")
+	check(s.level == lvl + 1 and rose, "the tide rises one level per phase")
+
+	s = _duel("crab", "gull")
+	s.ents[0].hp = 5000
+	s.snacks.append([s.ents[0].x + 300, s.ents[0].y])
+	s.step([{}, {}])
+	check(int(s.ents[0].hp) == 5000 + 3000 and s.snacks.is_empty(), "a snack heals 30 and disappears")
+
+	s = _duel("octopus", "crab")
+	s.ents[0].special = 4
+	s.step([{"s": 1024}, {}])
+	check(s.clouds.size() == 1, "octopus special drops an ink cloud")
+
+
+func test_determinism() -> void:
+	var a := Match.create(777, "", 6, "easy")
+	var b := Match.create(777, "", 6, "easy")
+	var c := Match.create(778, "", 6, "easy")
+	for i in 900:
+		a.step()
+		b.step()
+		c.step()
+	check(a.sim.state_hash() == b.sim.state_hash(), "same seed -> same state after 900 ticks")
+	check(a.sim.state_hash() != c.sim.state_hash(), "different seed -> different state")
+
+	var snap := a.sim.snapshot()
+	for i in 600:
+		a.step()
+	var d := Match.create(777, "", 6, "easy")
+	d.sim.restore(snap)
+	for i in 600:
+		d.step()
+	check(a.sim.state_hash() == d.sim.state_hash(), "snapshot + restore continues identically")
+
+
+## Golden traces: fixed seeds, all bots, fixed number of ticks -> fixed state hash.
+## An unintended change to rules, data or bots fails here. After an intended change, record new values:
+##   godot --headless --path . res://tests/run_tests.tscn -- --update-golden
+func test_golden_traces() -> void:
+	var path := "res://tests/golden/traces.json"
+	var update := OS.get_cmdline_user_args().has("--update-golden")
+	var cases := [{"seed": 1, "ticks": 1800}, {"seed": 2026, "ticks": 3600}, {"seed": 31337, "ticks": 6000}]
+	var recorded: Variant = Content.load_json(path) if FileAccess.file_exists(path) else null
+	var out: Array = []
+	for i in cases.size():
+		var cs: Dictionary = cases[i]
+		var m := Match.create(int(cs.seed), "", 6, "easy")
+		for t in int(cs.ticks):
+			m.step()
+		var row := {"seed": cs.seed, "ticks": cs.ticks, "hash": m.sim.state_hash(), "alive": m.sim.alive_count(), "level": m.sim.level}
+		out.append(row)
+		if not update:
+			var ok: bool = recorded is Array and i < recorded.size() and int(recorded[i].hash) == int(row.hash)
+			check(ok, "golden trace seed %d after %d ticks (hash %d, recorded %s)" % [cs.seed, cs.ticks, row.hash,
+				str(recorded[i].hash) if recorded is Array and i < recorded.size() else "none"])
+	if update:
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://tests/golden"))
+		var f := FileAccess.open(path, FileAccess.WRITE)
+		f.store_string(JSON.stringify(out, "  ", false, true) + "\n")
+		print("golden traces updated: ", out)
+
+
+func test_result_bookkeeping() -> void:
+	var backend = Platform.backend
+	var saved_path: String = backend.profile_path
+	backend.profile_path = "user://test_result_profile.json"
+	if FileAccess.file_exists(backend.profile_path):
+		DirAccess.remove_absolute(backend.profile_path)
+	var RS := preload("res://ui/result_screen.gd")
+	var o: Dictionary = RS.apply_result({"place": 1, "kos": 3, "animal": "gull"})
+	check(int(o.earned) == 60 + 30 and int(o.after) == 90, "win with 3 KOs earns 60 + 3 x 10 pearls")
+	o = RS.apply_result({"place": 2, "kos": 1, "animal": "gull"})
+	check(int(o.after) == 145 and o.unlocked.size() == 1 and str(o.unlocked[0].id) == "shell", "crossing 100 unlocks the first reward")
+	for i in 3:
+		o = RS.apply_result({"place": 1, "kos": 0, "animal": "crab"})
+	var p: Dictionary = Platform.load_profile()
+	check((p.unlocked_animals as Array).has("puffer") and int(p.pearls_total) == 325, "crossing 250 adds the pufferfish to the unlocked animals")
+	check(int(p.stats.matches) == 5 and int(p.stats.wins) == 4 and int(p.mastery.gull.matches) == 2, "stats and mastery counted")
+	DirAccess.remove_absolute(backend.profile_path)
+	backend.profile_path = saved_path
+
+
+## Asset policy: no file under assets/ without a credits row (source, author, licence, date).
+func test_every_asset_has_credits() -> void:
+	var credits := FileAccess.get_file_as_string("res://assets/credits.csv")
+	for path in files_under("res://assets/", [".svg", ".png", ".jpg", ".webp", ".ttf", ".otf", ".ogg", ".wav", ".glb", ".gltf"]):
+		var rel: String = str(path).trim_prefix("res://")
+		check(credits.contains("\n" + rel + ","), "credits row for " + rel)
 
 
 # --- helpers ---

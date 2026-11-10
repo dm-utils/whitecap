@@ -13,8 +13,44 @@ MENU_SETTINGS,Settings
 MENU_COMING_SOON,Coming soon
 MENU_ANIMALS_LOADED,{count} animals ready
 MENU_VERSION,Version {version}
-MATCH_PLACEHOLDER,Match will be here (seed {seed})
 COMMON_BACK,Back
 ANIMAL_CRAB,Pinch the Beach Crab
 ANIMAL_OCTOPUS,Inka the Octopus
 ANIMAL_GULL,Skye the Gull
+ANIMAL_PUFFER,Puff the Pufferfish
+ANIMAL_OTTER,Slick the Otter
+ANIMAL_SEAL,Bumper the Seal
+ANIMAL_HERMIT,Shelly the Hermit Crab
+ANIMAL_STAR,Twinkle the Starfish
+REWARD_SHELL_AVATAR,Shell avatar
+REWARD_BEACHCOMBER,Beachcomber badge
+REWARD_SUNSET_PINCH,Sunset Pinch look
+REWARD_WAVE_AVATAR,Wave avatar
+REWARD_MIDNIGHT_INKA,Midnight Inka look
+REWARD_TIDE_MASTER,Tide Master badge
+HUD_LEFT,{count} left
+HUD_TIDE,Tide {level}/{max}
+HUD_SPECIAL,SPECIAL
+HUD_TIDE_RISES,The tide rises!
+HUD_TIDE_WARNING,Tide coming in…
+HUD_SUDDEN_DEATH,Sudden death!
+HUD_WASHED_AWAY,Washed away!
+HUD_LAST_DRY,Last one dry!
+HUD_YOU,YOU
+HUD_CONTROLS_KEYS,WASD move · Space attack (auto-aim) · Shift special
+HUD_CONTROLS_MOUSE,WASD move · click attack · right-click special
+HUD_SKIP,Skip
+DROP_TITLE,Dropping in…
+RESULT_PLACE,#{place}
+RESULT_WIN,Last one dry!
+RESULT_CLOSE,So close — washed away near the end.
+RESULT_LOST,Washed away by the tide.
+RESULT_KOS,"{count} knockouts"
+RESULT_SURVIVED,{seconds}s survived
+RESULT_PEARLS,+{count} pearls
+RESULT_NEXT,Next: {reward} at {at}
+RESULT_UNLOCKED,New on your path: {reward}!
+RESULT_AGAIN,Again
+RESULT_MENU,Menu
+PATH_COMPLETE,Path complete!
+MENU_PEARLS,{count} pearls

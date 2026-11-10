@@ -5,10 +5,12 @@ extends Node
 
 const SCENES := {
 	"menu": "res://ui/main_menu.tscn",
-	"match": "res://view/match_placeholder.tscn",
+	"match": "res://view/match.tscn",
 }
 
 var args: Dictionary = {}
+## Handed from the match to the result screen.
+var last_result: Dictionary = {}
 
 
 func _ready() -> void:

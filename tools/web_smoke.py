@@ -73,14 +73,32 @@ def main() -> int:
         if hashlib.sha256(page.screenshot(clip=top)).hexdigest() == before:
             failures.append("tapping the start screen did not open the menu")
 
-        page.goto(f"http://127.0.0.1:{port}/index.html?scene=match&seed=123")
+        # the real match through the debug entry, with a fast tide (4 s per phase) to see it rise
+        console: list[str] = []
+        page.on("console", lambda msg: console.append(msg.text))
+        page.goto(f"http://127.0.0.1:{port}/index.html?scene=match&seed=123&tide=4&god=1")
         try:
             page.wait_for_selector("#loader.done", state="attached", timeout=60000)
         except Exception:
             failures.append("debug entry: engine did not start")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(2500)  # intro (drop-in) is 1.6 s
         if shots:
-            page.screenshot(path=f"{shots}/web-debug-match.png")
+            page.screenshot(path=f"{shots}/web-match-start.png")
+        hashes = set()
+        page.keyboard.down("KeyD")
+        page.keyboard.down("Space")
+        for _ in range(5):
+            hashes.add(canvas_hash(page))
+            page.wait_for_timeout(300)
+        page.keyboard.up("KeyD")
+        page.keyboard.up("Space")
+        if len(hashes) < 3:
+            failures.append("match: the canvas barely changed while playing (frames not coming?)")
+        page.wait_for_timeout(9000)
+        if shots:
+            page.screenshot(path=f"{shots}/web-match-tide.png")
+        fps = [line for line in console if line.startswith("fps ")]
+        print("match console:", "; ".join(fps[-3:]) or "no fps lines")
         browser.close()
     httpd.shutdown()
 

@@ -29,6 +29,10 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=0
 
+[debug]
+
+gdscript/warnings/integer_division=0
+
 [gui]
 
 timers/tooltip_delay_sec.mobile=3600.0

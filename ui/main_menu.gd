@@ -72,6 +72,17 @@ func _ready() -> void:
 	add_child(version)
 	version.position = Vector2(60, 40)
 
+	var pearls := Label.new()
+	pearls.text = tr("MENU_PEARLS").format({"count": int(profile.get("pearls_total", 0))})
+	pearls.label_settings = UiTheme.heading(40, UiTheme.INK, 0)
+	add_child(pearls)
+	pearls.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	pearls.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	pearls.offset_left = -400
+	pearls.offset_right = -60
+	pearls.offset_top = 40
+	pearls.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+
 	_toast = Label.new()
 	_toast.label_settings = UiTheme.heading(44, Color.WHITE, 10)
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
