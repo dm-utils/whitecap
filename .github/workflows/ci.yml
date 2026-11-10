@@ -85,6 +85,10 @@ jobs:
           mkdir -p build/shots
           "$RUNNER_TEMP/venv/bin/python" -I tools/web_smoke.py build/web build/shots
 
+      - name: Contact sheet of the screenshots
+        if: always()
+        run: mkdir -p build/shots && python3 -I tools/contact_sheet.py build/shots "Getij — ${GITHUB_REF_NAME}"
+
       - name: Android debug build
         run: |
           sudo update-alternatives --set java /usr/lib/jvm/temurin-17-jdk-amd64/bin/java || true
