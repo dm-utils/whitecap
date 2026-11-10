@@ -36,6 +36,7 @@ func _ready() -> void:
 	test_replay()
 	test_leaderboard_rows()
 	test_sdk_has_what_the_game_calls()
+	test_score_check()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -503,6 +504,38 @@ func test_sdk_has_what_the_game_calls() -> void:
 			if not St33f.client.has_method(m.get_string(1)):
 				missing.append("%s in %s" % [m.get_string(1), path])
 	check(missing.is_empty(), "SDK has every client call the game makes (missing: %s)" % ", ".join(missing))
+
+
+## The replay check: board rules first, then the whole match again. Also writes a sample for the headless scene.
+func test_score_check() -> void:
+	var seed_value := 777001
+	var animal := Daily.animal_for(seed_value)
+	var m := Match.create(seed_value, animal, 6, Daily.BOTS)
+	while not (m.finished() or m.human_out()):
+		m.step(_player_cmd(m.sim, m.sim.ents[m.human]))
+	var r := m.human_result()
+	var claimed := {"place": r.place, "kos": r.kos, "survived_s": r.survived_s}
+	var rep := Replay.encode(m.replay)
+	var other: String = Match.SLICE_ANIMALS[(Match.SLICE_ANIMALS.find(animal) + 1) % Match.SLICE_ANIMALS.size()]
+	var lie := claimed.duplicate()
+	lie.place = 1 if int(claimed.place) != 1 else 2
+	var pending := {"scores": [
+		{"id": "sc_good", "board": "day:2026-11-10", "seed": seed_value, "animal": animal, "bots": "normal", "claimed": claimed, "replay": rep},
+		{"id": "sc_animal", "board": "day:2026-11-10", "seed": seed_value, "animal": other, "bots": "normal", "claimed": claimed, "replay": rep},
+		{"id": "sc_bots", "board": "week:2026-W46", "seed": seed_value, "animal": animal, "bots": "normal", "claimed": claimed, "replay": rep},
+		{"id": "sc_lie", "board": "day:2026-11-10", "seed": seed_value, "animal": animal, "bots": "normal", "claimed": lie, "replay": rep},
+	]}
+	var out := ScoreCheck.run(pending)
+	var by := {}
+	for v in out.verdicts:
+		by[v.id] = v
+	check(by.sc_good.ok, "an honest daily score is verified (%s)" % by.sc_good.reason)
+	check(not by.sc_animal.ok and by.sc_animal.reason == "not_the_animal_of_the_day", "another animal on the day board is rejected")
+	check(not by.sc_bots.ok and by.sc_bots.reason == "wrong_bots_for_week", "week board with harder-to-check bots is rejected")
+	check(not by.sc_lie.ok and by.sc_lie.reason == "result_mismatch", "a better place than played is rejected")
+	var f := FileAccess.open("user://verify_sample.json", FileAccess.WRITE)
+	f.store_string(JSON.stringify(pending))
+	f.close()
 
 
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).
