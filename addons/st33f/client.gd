@@ -197,6 +197,11 @@ func remove_friend(player_id: String) -> Dictionary:
 
 # --- privacy: export and delete (each service answers for its own data) ---
 
+## The public privacy statement (accounts serves it), in the given language ("nl" / "en").
+func privacy_url(lang := "en") -> String:
+	return "%s/privacy?lang=%s" % [base_for("accounts"), lang]
+
+
 func export_account() -> Dictionary:
 	return await call_api(HTTPClient.METHOD_GET, "/v1/me/export", null, true)
 

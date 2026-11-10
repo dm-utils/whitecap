@@ -370,8 +370,16 @@ func _open_privacy() -> void:
 		l.custom_minimum_size = Vector2(1200, 0)
 		l.add_theme_font_size_override("font_size", 30)
 		text.add_child(l)
+	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override("separation", 20)
+	box.add_child(buttons)
+	if St33f.client != null:
+		var full := Button.new()
+		full.text = tr("PRIVACY_FULL")
+		full.pressed.connect(func() -> void: OS.shell_open(St33f.client.privacy_url(Platform.language())))
+		buttons.add_child(full)
 	var close := Button.new()
 	close.text = tr("COMMON_CLOSE")
-	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	close.pressed.connect(shade.queue_free)
-	box.add_child(close)
+	buttons.add_child(close)
