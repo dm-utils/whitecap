@@ -67,6 +67,8 @@ jobs:
         run: |
           mkdir -p build/web build/windows build/android && touch build/.gdignore
           timeout 600 godot --headless --path . --export-release "Web" build/web/index.html
+          # debug web build only for the smoke test (debug flags: fast tide, god mode, fps log)
+          mkdir -p build/web-debug && timeout 600 godot --headless --path . --export-debug "Web" build/web-debug/index.html
           timeout 600 godot --headless --path . --export-release "Windows" build/windows/Getij.exe
 
       - name: Pre-compress web build (brotli)
@@ -83,7 +85,7 @@ jobs:
           "$RUNNER_TEMP/venv/bin/pip" install -q playwright
           "$RUNNER_TEMP/venv/bin/python" -m playwright install --with-deps chromium >/dev/null
           mkdir -p build/shots
-          "$RUNNER_TEMP/venv/bin/python" -I tools/web_smoke.py build/web build/shots
+          "$RUNNER_TEMP/venv/bin/python" -I tools/web_smoke.py build/web-debug build/shots
 
       - name: Contact sheet of the screenshots
         if: always()
