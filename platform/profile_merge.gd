@@ -36,6 +36,12 @@ static func merge(local: Dictionary, server: Dictionary) -> Dictionary:
 		looks["owned"] = _union(local.get("looks", {}).get("owned", []), server.get("looks", {}).get("owned", []))
 		out["looks"] = looks
 
+	# a newer copy without a name (a fresh device) must not drop the name the player already has
+	if not out.has("name"):
+		var older: Dictionary = server if newer == local else local
+		if older.has("name"):
+			out["name"] = older.name
+
 	# a selected animal must be one we own
 	if not (out["unlocked_animals"] as Array).has(out.get("selected_animal", "")) and not (out["unlocked_animals"] as Array).is_empty():
 		out["selected_animal"] = out["unlocked_animals"][0]

@@ -166,3 +166,14 @@ func submit_score(run_token: String, result: Dictionary, animal: String, bots: S
 ## pending}], me}. Signed in, "me" holds the player's own place even outside the top 50.
 func get_board(board: String) -> Dictionary:
 	return await call_api(HTTPClient.METHOD_GET, "/v1/games/%s/boards/%s" % [game, board], null, token != "", "leaderboards")
+
+
+## Publish the player's public profile (signed in): {name: {a, n, num}, animal, badges: ["crab:2"], collection}.
+## Names are indices into the game's word lists, never free text. Returns {ok, player} (the public id).
+func put_public_profile(profile: Dictionary) -> Dictionary:
+	return await call_api(HTTPClient.METHOD_PUT, "/v1/games/%s/me" % game, profile, true, "leaderboards")
+
+
+## Someone's public profile by their public id (from a board row): {player, name, animal, badges, collection}.
+func get_player(player_id: String) -> Dictionary:
+	return await call_api(HTTPClient.METHOD_GET, "/v1/games/%s/players/%s" % [game, player_id], null, false, "leaderboards")

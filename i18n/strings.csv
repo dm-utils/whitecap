@@ -119,3 +119,42 @@ REPORT_SENT_NO_ATTACHMENTS,Thanks! Your report was sent, but the attachments cou
 REPORT_EMPTY,Write a few words first.,Schrijf eerst een paar woorden.
 SETTINGS_LANGUAGE,Language,Taal
 SETTINGS_SOUND,Sound effects,Geluidseffecten
+NAME_ADJ_SWIFT,Swift,Snelle
+NAME_ADJ_BRAVE,Brave,Dappere
+NAME_ADJ_SNEAKY,Sneaky,Stiekeme
+NAME_ADJ_SUNNY,Sunny,Zonnige
+NAME_ADJ_SALTY,Salty,Zoute
+NAME_ADJ_BOUNCY,Bouncy,Stuiterende
+NAME_ADJ_SLEEPY,Sleepy,Slaperige
+NAME_ADJ_MIGHTY,Mighty,Machtige
+NAME_ADJ_LUCKY,Lucky,Gelukkige
+NAME_ADJ_FIZZY,Fizzy,Bruisende
+NAME_ADJ_JOLLY,Jolly,Vrolijke
+NAME_ADJ_DARING,Daring,Gedurfde
+NAME_NOUN_OTTER,Otter,Otter
+NAME_NOUN_GULL,Gull,Meeuw
+NAME_NOUN_CRAB,Crab,Krab
+NAME_NOUN_SQUID,Squid,Inktvis
+NAME_NOUN_SEAL,Seal,Zeehond
+NAME_NOUN_CLAM,Clam,Mossel
+NAME_NOUN_PUFFER,Puffer,Kogelvis
+NAME_NOUN_STARFISH,Starfish,Zeester
+NAME_NOUN_SHRIMP,Shrimp,Garnaal
+NAME_NOUN_PELICAN,Pelican,Pelikaan
+NAME_NOUN_TURTLE,Turtle,Schildpad
+NAME_NOUN_URCHIN,Urchin,Zee-egel
+NAME_FORMAT,{adjective} {noun} {number},{adjective} {noun} {number}
+SETTINGS_NAME,Player name,Spelersnaam
+SETTINGS_NAME_OTHER,Another name,Andere naam
+MASTERY_BRONZE,Bronze,Brons
+MASTERY_SILVER,Silver,Zilver
+MASTERY_GOLD,Gold,Goud
+RESULT_MASTERY,{tier} mastery with {animal}!,{tier} meesterschap met {animal}!
+PROFILE_TITLE,{name},{name}
+PROFILE_FAVOURITE,Favourite: {animal},Favoriet: {animal}
+PROFILE_BADGES,Mastery,Meesterschap
+PROFILE_NO_BADGES,No mastery yet.,Nog geen meesterschap.
+PROFILE_COLLECTION,{count} animals collected,{count} dieren verzameld
+PROFILE_LOADING,Loading profile…,Profiel laden…
+PROFILE_UNAVAILABLE,This player has no public profile yet.,Deze speler heeft nog geen openbaar profiel.
+COMMON_CLOSE,Close,Sluiten

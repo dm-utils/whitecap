@@ -38,14 +38,19 @@ func _ready() -> void:
 
 	var panel := PanelContainer.new()
 	add_child(panel)
-	# fixed distance below the title: the panel grows downward with longer texts (Dutch, German)
+	# fixed distance below the title, fixed height to the bottom; the content scrolls when it is taller
+	# (styleguide: every dialog fits the screen and scrolls; longer texts in Dutch or German)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	panel.custom_minimum_size = Vector2(1100, 0)
+	panel.custom_minimum_size = Vector2(1100, 1080 - 170 - 40)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.position.y = 170
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(scroll)
 	_box = VBoxContainer.new()
 	_box.add_theme_constant_override("separation", 22)
-	panel.add_child(_box)
+	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_box)
 
 	# controls
 	var row := HBoxContainer.new()
@@ -74,6 +79,29 @@ func _ready() -> void:
 		Platform.set_language(Platform.LANGUAGES[i])
 		get_tree().reload_current_scene())
 	lang_row.add_child(lang)
+
+	# player name: generated from word lists, never typed (nothing to moderate); "another" rolls a new one
+	var name_row := HBoxContainer.new()
+	name_row.add_theme_constant_override("separation", 30)
+	_box.add_child(name_row)
+	name_row.add_child(_heading(tr("SETTINGS_NAME")))
+	var name_label := Label.new()
+	name_label.add_theme_font_size_override("font_size", 40)
+	var p0: Dictionary = Platform.load_profile()
+	var had_name := PlayerName.valid(p0.get("name"))
+	name_label.text = PlayerName.text(PlayerName.ensure(p0))
+	if not had_name:
+		Platform.save_profile(p0)
+	name_row.add_child(name_label)
+	var reroll := Button.new()
+	reroll.text = tr("SETTINGS_NAME_OTHER")
+	reroll.pressed.connect(func() -> void:
+		var p: Dictionary = Platform.load_profile()
+		p["name"] = PlayerName.random()
+		Platform.save_profile(p)
+		name_label.text = PlayerName.text(p.name)
+		PublicProfile.publish())
+	name_row.add_child(reroll)
 
 	# sound effects volume (a test sound plays when you let go)
 	var sound_row := HBoxContainer.new()

@@ -1,6 +1,7 @@
 extends Control
 ## Leaderboard (FO §8): tabs Day (the daily challenge) / Week; each player's best; your own place always visible.
-## Scores that wait for the replay check are marked. Players are shown by a short pseudonym until names (7d).
+## Scores that wait for the replay check are marked. Names come from word lists (PlayerName); tap a row for the
+## player's public profile (name, favourite animal, mastery, collection).
 ## Debug entry: --scene=leaderboard [--board=week]
 
 const BOARDS := ["day", "week"]
@@ -118,7 +119,14 @@ func fill(data: Dictionary) -> void:
 func _row(e: Dictionary, mine: bool) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 24)
-	var name := tr("BOARD_YOU") if mine else tr("BOARD_PLAYER").format({"id": str(e.player).left(6)})
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var player_id := str(e.get("player", ""))
+	row.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT or ev is InputEventScreenTouch and ev.pressed:
+			open_profile(player_id))
+	var shown := PlayerName.text(e.get("name")) if e.get("name") is Dictionary else tr("BOARD_PLAYER").format({"id": str(e.player).left(6)})
+	var name := "%s (%s)" % [shown, tr("BOARD_YOU")] if mine else shown
 	var colour := UiTheme.GOLD.darkened(0.35) if mine else UiTheme.INK
 	var rank := _label("#%d" % int(e.rank), colour)
 	rank.custom_minimum_size = Vector2(120, 0)
@@ -134,6 +142,64 @@ func _row(e: Dictionary, mine: bool) -> Control:
 	pts.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(pts)
 	return row
+
+
+## The player's public profile in the standard dialog frame: fits the screen, closes with a tap outside or Close.
+func open_profile(player_id: String) -> Control:
+	var shade := ColorRect.new()
+	shade.color = Color(0, 0, 0, 0.45)
+	add_child(shade)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed or ev is InputEventScreenTouch and ev.pressed:
+			shade.queue_free())
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(900, 0)
+	shade.add_child(panel)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 16)
+	panel.add_child(box)
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation", 12)
+	box.add_child(body)
+	body.add_child(_label(tr("PROFILE_LOADING"), UiTheme.INK))
+	var close := Button.new()
+	close.text = tr("COMMON_CLOSE")
+	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	close.pressed.connect(shade.queue_free)
+	box.add_child(close)
+	if player_id != "" and St33f.client != null:
+		var res: Dictionary = await St33f.client.get_player(player_id)
+		if is_instance_valid(body):
+			fill_profile(body, res.data if res.ok else {})
+	return shade
+
+
+## Rows of a profile dialog from the service's answer ({} = no public profile). Also used by tests.
+func fill_profile(body: VBoxContainer, p: Dictionary) -> void:
+	for c in body.get_children():
+		c.queue_free()
+	if p.is_empty():
+		body.add_child(_label(tr("PROFILE_UNAVAILABLE"), UiTheme.INK))
+		return
+	var title := _label(PlayerName.text(p.get("name")), UiTheme.INK)
+	title.label_settings = UiTheme.heading(56, UiTheme.INK, 0)
+	body.add_child(title)
+	var fav := Content.animal(str(p.get("animal", "")))
+	body.add_child(_label(tr("PROFILE_FAVOURITE").format({"animal": tr(str(fav.get("name_key", "?")))}), UiTheme.INK))
+	body.add_child(_label(tr("PROFILE_BADGES"), UiTheme.GOLD.darkened(0.35)))
+	var badges: Array = p.get("badges", [])
+	if badges.is_empty():
+		body.add_child(_label(tr("PROFILE_NO_BADGES"), UiTheme.INK))
+	for b in badges:
+		var parts := str(b).split(":")
+		if parts.size() == 2:
+			var a := Content.animal(parts[0])
+			body.add_child(_label("%s · %s" % [tr(str(a.get("name_key", parts[0]))), Mastery.tier_name(int(parts[1]))], UiTheme.INK))
+	body.add_child(_label(tr("PROFILE_COLLECTION").format({"count": (p.get("collection", []) as Array).size()}), UiTheme.INK))
 
 
 func _label(text: String, colour: Color) -> Label:

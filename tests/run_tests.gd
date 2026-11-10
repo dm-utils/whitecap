@@ -37,6 +37,7 @@ func _ready() -> void:
 	test_leaderboard_rows()
 	test_sdk_has_what_the_game_calls()
 	test_score_check()
+	test_names_mastery_profiles()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -541,6 +542,51 @@ func test_score_check() -> void:
 	var f := FileAccess.open("user://verify_sample.json", FileAccess.WRITE)
 	f.store_string(JSON.stringify(pending))
 	f.close()
+
+
+## Names from word lists (in the player's language), mastery tiers, merge keeps the name, the public profile.
+func test_names_mastery_profiles() -> void:
+	var name := {"a": 0, "n": 0, "num": 42}
+	var locale := TranslationServer.get_locale()
+	TranslationServer.set_locale("en")
+	var en := PlayerName.text(name)
+	TranslationServer.set_locale("nl")
+	var nl := PlayerName.text(name)
+	TranslationServer.set_locale(locale)
+	check(en == "Swift Otter 42" and nl == "Snelle Otter 42", "names read in the player's language (%s / %s)" % [en, nl])
+	check(PlayerName.valid(name) and not PlayerName.valid({"a": 99, "n": 0, "num": 1}) and not PlayerName.valid("Captain"), "name validity")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var ok := true
+	for i in 200:
+		ok = ok and PlayerName.valid(PlayerName.random(rng))
+	check(ok, "random names are always valid")
+	check(PlayerName.text({"a": 500, "n": 1, "num": 3}).begins_with("?"), "a name from a newer word list still reads")
+
+	check(Mastery.tier({}) == 0 and Mastery.tier({"matches": 5}) == 1 and Mastery.tier({"matches": 30, "wins": 4}) == 1, "bronze needs matches; silver also wins")
+	check(Mastery.tier({"matches": 25, "wins": 5}) == 2 and Mastery.tier({"matches": 80, "wins": 20}) == 3, "silver and gold")
+	var prof := {"mastery": {"gull": {"matches": 26, "wins": 6}, "crab": {"matches": 5, "wins": 0}, "octopus": {"matches": 1}}, "unlocked_animals": ["crab", "gull"], "selected_animal": "gull"}
+	check(Mastery.badges(prof) == ["crab:1", "gull:2"], "badges sorted, only reached tiers (%s)" % str(Mastery.badges(prof)))
+	var pub := PublicProfile.from(prof)
+	check(PlayerName.valid(pub.name) and pub.animal == "gull" and pub.badges.size() == 2 and pub.collection.size() == 2, "public profile from the save")
+	check(not pub.has("pearls_total") and not pub.has("settings") and not pub.has("stats"), "only public fields leave the device")
+
+	var merged := ProfileMerge.merge({"updated_at": "2026-11-11", "unlocked_animals": ["crab"]}, {"updated_at": "2026-11-10", "name": name, "unlocked_animals": ["crab"]})
+	check(merged.get("name") == name, "a fresh device does not drop the player's name")
+
+	var screen = preload("res://ui/leaderboard_screen.gd").new()
+	var body := VBoxContainer.new()
+	screen.fill_profile(body, {"player": "0123456789abcdef", "name": name, "animal": "gull", "badges": ["gull:2"], "collection": ["crab", "gull"]})
+	check(body.get_child_count() == 5, "profile dialog: name, favourite, heading, one badge, collection (%d)" % body.get_child_count())
+	for c in body.get_children():
+		body.remove_child(c)
+		c.free()
+	screen.fill_profile(body, {})
+	check(body.get_child_count() == 1, "no public profile says so")
+	for c in body.get_children():
+		c.free()
+	body.free()
+	screen.free()
 
 
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).

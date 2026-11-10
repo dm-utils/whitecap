@@ -89,6 +89,10 @@ func _ready() -> void:
 	inner.add_child(_label(next_text, null))
 	for rew in outcome.unlocked:
 		inner.add_child(_label(tr("RESULT_UNLOCKED").format({"reward": tr(str(rew.name_key))}), UiTheme.heading(36, UiTheme.GOLD, 8)))
+	if int(outcome.mastery_up) > 0:
+		inner.add_child(_label(tr("RESULT_MASTERY").format({"tier": Mastery.tier_name(int(outcome.mastery_up)),
+			"animal": tr(str(Content.animal(str(r.animal)).get("name_key", "")))}), UiTheme.heading(36, UiTheme.GOLD, 8)))
+	PublicProfile.publish() # badges and collection may have changed
 
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -145,10 +149,12 @@ static func apply_result(r: Dictionary) -> Dictionary:
 	p["stats"] = stats
 	var mastery: Dictionary = p.get("mastery", {})
 	var mine: Dictionary = mastery.get(str(r.animal), {})
+	var tier_before := Mastery.tier(mine)
 	mine["matches"] = int(mine.get("matches", 0)) + 1
 	mine["wins"] = int(mine.get("wins", 0)) + (1 if int(r.place) == 1 else 0)
 	mastery[str(r.animal)] = mine
 	p["mastery"] = mastery
+	var tier_after := Mastery.tier(mine)
 	var unlocked: Array = []
 	var next: Dictionary = {}
 	var prev_at := 0
@@ -166,4 +172,5 @@ static func apply_result(r: Dictionary) -> Dictionary:
 	var progress_after := 1.0 if next.is_empty() else (after - prev_at) / maxf(1.0, span)
 	var progress_before := clampf((before - prev_at) / maxf(1.0, span), 0.0, 1.0) if unlocked.is_empty() else 0.0
 	return {"earned": earned, "before": before, "after": after, "unlocked": unlocked, "next": next,
+		"mastery_up": tier_after if tier_after > tier_before else 0,
 		"progress_before": progress_before, "progress_after": progress_after}
