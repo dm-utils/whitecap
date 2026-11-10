@@ -17,6 +17,11 @@ func is_signed_in() -> bool:
 	return _st33f.is_signed_in()
 
 
+## Server value when known (last fetched, also from disk), else the game's declared default.
+func get_config(key: String, default_value: Variant) -> Variant:
+	return _st33f.get_setting(key, super.get_config(key, default_value))
+
+
 func save_profile(p: Dictionary) -> void:
 	super.save_profile(p)
 	if _st33f.is_signed_in():

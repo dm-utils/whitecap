@@ -25,6 +25,7 @@ func _ready() -> void:
 	test_golden_traces()
 	test_result_bookkeeping()
 	test_every_asset_has_credits()
+	test_setting_declarations()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -308,6 +309,23 @@ func test_result_bookkeeping() -> void:
 	check(int(p.stats.matches) == 5 and int(p.stats.wins) == 4 and int(p.mastery.gull.matches) == 2, "stats and mastery counted")
 	DirAccess.remove_absolute(backend.profile_path)
 	backend.profile_path = saved_path
+
+
+## The same checks the server applies when CI pushes the declarations, so a bad one fails here first.
+func test_setting_declarations() -> void:
+	var d: Dictionary = Content.load_json("res://data/settings_defs.json")
+	var key_rx := RegEx.create_from_string("^[a-z][a-z0-9_]{0,47}$")
+	for def in d.defs:
+		var ok_type := false
+		match str(def.type):
+			"bool": ok_type = typeof(def.default) == TYPE_BOOL
+			"int": ok_type = typeof(def.default) == TYPE_FLOAT and float(def.default) == floor(float(def.default))
+			"float": ok_type = typeof(def.default) == TYPE_FLOAT
+			"string": ok_type = typeof(def.default) == TYPE_STRING
+		check(key_rx.search(str(def.key)) != null and ok_type and str(def.get("description", "")) != "",
+			"setting %s: valid key, default matches type, has a description" % def.key)
+	check(Platform.get_config("show_daily", false) == true and Platform.get_config("event_banner", "x") == "",
+		"get_config falls back to the declared defaults")
 
 
 ## Asset policy: no file under assets/ without a credits row (source, author, licence, date).

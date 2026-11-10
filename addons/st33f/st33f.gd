@@ -47,6 +47,45 @@ func configure(p_game: String, transport: St33fTransport = null, token_store: St
 	profile_sync.synced.connect(func(_p: Dictionary, _v: int) -> void: _save_state())
 
 
+## --- remote settings ---
+## The last values from the server, kept on disk so an offline start still has them. Games always pass a default.
+
+const SETTINGS_PATH := "user://st33f/settings.json"
+const SETTINGS_MAX_AGE_S := 60.0
+
+var settings: Dictionary = {}
+var settings_version := 0
+var _settings_at := -1000.0
+
+
+func get_setting(key: String, default_value: Variant) -> Variant:
+	if settings.is_empty() and FileAccess.file_exists(SETTINGS_PATH):
+		var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(SETTINGS_PATH))
+		if d is Dictionary:
+			settings = d.get("values", {})
+			settings_version = int(d.get("version", 0))
+	return settings.get(key, default_value)
+
+
+## Fetch fresh values (at most once a minute). Returns true when the values changed.
+func fetch_settings(force := false) -> bool:
+	var now := Time.get_ticks_msec() / 1000.0
+	if not force and now - _settings_at < SETTINGS_MAX_AGE_S:
+		return false
+	_settings_at = now
+	var res: Dictionary = await client.get_settings()
+	if not res.ok:
+		return false
+	var changed := int(res.data.get("version", 0)) != settings_version or settings.is_empty()
+	settings = res.data.get("values", {})
+	settings_version = int(res.data.get("version", 0))
+	DirAccess.make_dir_recursive_absolute(SETTINGS_PATH.get_base_dir())
+	var f := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify({"version": settings_version, "values": settings}))
+	return changed
+
+
 ## Turn on crash reporting (the game calls this once at start). Browsers close tabs without notice, so the
 ## unclean-exit breadcrumb is only used in native builds.
 func start_crash_reporting(scene_name: String) -> void:

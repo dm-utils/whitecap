@@ -9,7 +9,7 @@ const PROFILE_FORMAT := 1
 var profile_path := "user://profile.json"
 var results_path := "user://results.json"
 var crash_path := "user://crashes.log"
-var config_path := "res://data/settings.json"
+var config_path := "res://data/settings_defs.json"
 
 var _config: Dictionary = {}
 
@@ -72,10 +72,13 @@ func submit_result(board: String, result: Dictionary, _replay: Dictionary) -> vo
 		_write_json(results_path, all)
 
 
+## Local defaults from the game's own declarations (data/settings_defs.json).
 func get_config(key: String, default_value: Variant) -> Variant:
 	if _config.is_empty():
 		var c: Variant = _read_json(config_path)
-		_config = c if typeof(c) == TYPE_DICTIONARY else {}
+		if typeof(c) == TYPE_DICTIONARY:
+			for d in c.get("defs", []):
+				_config[str(d.key)] = d.default
 	return _config.get(key, default_value)
 
 

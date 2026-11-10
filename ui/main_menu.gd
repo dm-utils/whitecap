@@ -63,7 +63,20 @@ func _ready() -> void:
 	daily.theme_type_variation = "BlueButton"
 	daily.text = tr("MENU_DAILY")
 	daily.pressed.connect(_soon)
+	daily.visible = bool(Platform.get_config("show_daily", true)) # remote setting
 	right.add_child(daily)
+
+	# remote setting: event banner (owner-controlled text, empty = none)
+	var banner_text := str(Platform.get_config("event_banner", ""))
+	if banner_text != "":
+		var banner := Label.new()
+		banner.text = banner_text
+		banner.label_settings = UiTheme.heading(48, UiTheme.GOLD, 10)
+		banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		add_child(banner)
+		banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+		banner.position.y = 110
+		banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	var play := Button.new()
 	play.theme_type_variation = "PlayButton"
 	play.text = tr("MENU_PLAY")

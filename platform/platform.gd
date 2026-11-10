@@ -16,8 +16,11 @@ const ReportOverlay := preload("res://ui/report_overlay.gd")
 
 func _ready() -> void:
 	backend = RemoteBackend.new(St33f)
-	if not OS.get_cmdline_user_args().has("--no-crash-reports"):
+	var args := OS.get_cmdline_user_args()
+	if not args.has("--no-crash-reports"):
 		St33f.start_crash_reporting("boot")
+	if not args.has("--no-network"):
+		St33f.fetch_settings()
 
 
 ## Every main screen calls this, so an unclean exit can say where it happened.

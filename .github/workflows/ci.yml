@@ -61,7 +61,16 @@ jobs:
         run: timeout 600 godot --headless --path . --import
 
       - name: Tests
-        run: timeout 300 godot --headless --path . res://tests/run_tests.tscn -- --no-crash-reports
+        run: timeout 300 godot --headless --path . res://tests/run_tests.tscn -- --no-crash-reports --no-network
+
+      - name: Push setting declarations to the dev platform (develop only, needs the deploy key)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        env:
+          DEPLOY_KEY: ${{ secrets.ST33F_DEPLOY_KEY_DEV }}
+        run: |
+          if [ -z "$DEPLOY_KEY" ]; then echo "::notice::ST33F_DEPLOY_KEY_DEV not set yet (OWNER_TASKS 5); skipping"; exit 0; fi
+          curl -sf -X PUT -H "Content-Type: application/json" -H "X-Deploy-Key: $DEPLOY_KEY" \
+            --data @data/settings_defs.json https://st33f-accounts-dev.st33fd3v.workers.dev/v1/games/getij/settings/defs
 
       - name: Export Web and Windows
         run: |

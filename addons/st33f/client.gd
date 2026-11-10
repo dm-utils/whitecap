@@ -118,6 +118,11 @@ func put_profile(profile: Dictionary, version: int) -> Dictionary:
 	return await call_api(HTTPClient.METHOD_PUT, "/v1/games/%s/profile" % game, {"profile": profile, "version": version}, true)
 
 
+## Remote settings (public, no sign-in): {version, values}
+func get_settings() -> Dictionary:
+	return await call_api(HTTPClient.METHOD_GET, "/v1/games/%s/settings" % game)
+
+
 # --- feedback ---
 
 ## A player report. Signed in when a token exists (so the player can see it later), anonymous otherwise.
