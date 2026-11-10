@@ -3,6 +3,7 @@ extends Node
 ## Exit code 1 on any failure, so CI fails.
 ##   godot --headless --path . res://tests/run_tests.tscn
 
+const LOCAL_SEED_2026_11_10 := 1923612937 # FNV-1a, computed independently in Python
 const LocalBackend := preload("res://platform/local_backend.gd")
 const BootScript := preload("res://boot/boot.gd")
 const ContentScript := preload("res://sim/content.gd")
@@ -31,6 +32,7 @@ func _ready() -> void:
 	test_island_view()
 	test_fx_draw()
 	test_sfx()
+	test_daily()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -382,6 +384,26 @@ func test_sfx() -> void:
 	if OS.has_environment("CI"):
 		var absent := sounds.keys().filter(func(n): return not Sfx.has_sound(n))
 		check(absent.is_empty(), "every sound was built and imported (missing: %s)" % ", ".join(absent))
+
+
+## The daily challenge: UTC day and countdown, a stable local seed, same animal for everyone, score and best.
+func test_daily() -> void:
+	var t := 1794315600.0 # 2026-11-10 13:00:00 UTC
+	check(Daily.day_of(t) == "2026-11-10" and Daily.seconds_left(t) == 11 * 3600 and Daily.countdown(t) == "11:00:00", "UTC day and countdown")
+	check(Daily.day_of(t + 11 * 3600) == "2026-11-11", "a new day at midnight UTC")
+	var s := Daily.local_seed("2026-11-10")
+	check(s == LOCAL_SEED_2026_11_10, "local seed is the same on every platform (got %d)" % s)
+	check(s != Daily.local_seed("2026-11-11") and s >= 1 and s <= 2000000000, "local seed changes daily, in range")
+	check(Match.SLICE_ANIMALS.has(Daily.animal_for(s)) and Daily.animal_for(s) == Daily.animal_for(s), "the animal follows from the seed")
+	var win := Daily.score({"place": 1, "kos": 2, "survived_s": 100})
+	var last := Daily.score({"place": 6, "kos": 0, "survived_s": 30})
+	check(win == 1000 + 600 + 200 and last == 100 + 60, "score = place + knockouts + seconds (got %d, %d)" % [win, last])
+	var r := Daily.record({"pearls_total": 5}, "2026-11-10", 800)
+	check(r.best == 800 and r.improved and r.profile.pearls_total == 5, "first daily score")
+	r = Daily.record(r.profile, "2026-11-10", 300)
+	check(r.best == 800 and not r.improved and r.profile.daily.plays == 2, "a worse try keeps the best")
+	r = Daily.record(r.profile, "2026-11-11", 300)
+	check(r.best == 300 and r.profile.daily.plays == 1, "a new day starts over")
 
 
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).

@@ -32,6 +32,12 @@ func _ready() -> void:
 	box.add_child(_label(msg, UiTheme.heading(56, UiTheme.INK, 0)))
 	box.add_child(_label("%s  ·  %s" % [tr("RESULT_KOS").format({"count": r.kos}), tr("RESULT_SURVIVED").format({"seconds": r.survived_s})],
 		UiTheme.heading(40, UiTheme.INK, 0)))
+	if r.has("daily"):
+		var d := record_daily(r)
+		box.add_child(_label(tr("RESULT_DAILY_SCORE").format({"score": d.score, "best": d.best}), UiTheme.heading(44, UiTheme.GOLD, 8)))
+		var why := str(r.daily.get("why", ""))
+		if why != "":
+			box.add_child(_label(tr("RESULT_DAILY_OFFLINE") if why == "offline" else tr("RESULT_DAILY_SIGN_IN"), UiTheme.heading(32, UiTheme.INK, 0)))
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(1000, 0)
@@ -94,6 +100,14 @@ func _label(text: String, settings: LabelSettings) -> Label:
 	if settings != null:
 		l.label_settings = settings
 	return l
+
+
+## The daily challenge: score this match and keep today's best in the profile. Returns {score, best, improved}.
+static func record_daily(r: Dictionary) -> Dictionary:
+	var points := Daily.score(r)
+	var rec := Daily.record(Platform.load_profile(), str(r.daily.day), points)
+	Platform.save_profile(rec.profile)
+	return {"score": points, "best": rec.best, "improved": rec.improved}
 
 
 ## Pure bookkeeping, also used by tests: pearls, stats, mastery and newly reached rewards.

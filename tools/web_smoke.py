@@ -73,6 +73,20 @@ def main() -> int:
         if hashlib.sha256(page.screenshot(clip=top)).hexdigest() == before:
             failures.append("tapping the start screen did not open the menu")
 
+        # the daily challenge button: asks the leaderboards service (or falls back offline) and starts the match
+        before = hashlib.sha256(page.screenshot(clip=top)).hexdigest()
+        page.mouse.click(1052, 537)
+        page.wait_for_timeout(6000)
+        if shots:
+            page.screenshot(path=f"{shots}/web-daily.png")
+        if hashlib.sha256(page.screenshot(clip=top)).hexdigest() == before:
+            failures.append("the daily challenge button did not start a match")
+        page.goto(f"http://127.0.0.1:{port}/index.html")
+        page.wait_for_selector("#loader.done", state="attached", timeout=60000)
+        page.wait_for_timeout(1500)
+        page.mouse.click(640, 360)
+        page.wait_for_timeout(1200)
+
         # the real match through the debug entry, with a fast tide (4 s per phase) to see it rise
         console: list[str] = []
         page.on("console", lambda msg: console.append(msg.text))

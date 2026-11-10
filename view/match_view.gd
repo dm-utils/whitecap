@@ -11,6 +11,7 @@ const RESULT_SCENE := "res://ui/result_screen.tscn"
 const ANIMAL_PX := 96.0 # on-screen size of an animal (styleguide: recognisable silhouette)
 
 var m: Match
+var _plan: Dictionary = {} # from the menu (daily challenge), empty for a normal match
 var island: IslandView # ground and water, one shader (z -1)
 var board: Node2D # snacks, ink, dive markers, ripples, shadows and rings (z 0)
 var actors: Node2D # cutout animals, sorted by y (z 1)
@@ -45,9 +46,16 @@ func _ready() -> void:
 	var profile: Dictionary = Platform.load_profile()
 	var seed_value := Boot.seed_value() if Boot.seed_value() != 0 else randi() % 2000000000 + 1
 	var animal := str(Boot.args.get("animal", profile.get("selected_animal", "octopus")))
+	var bots := str(Boot.args.get("bots", "easy"))
+	_plan = Boot.next_match
+	Boot.next_match = {}
+	if not _plan.is_empty(): # the daily challenge: seed, animal and bots are the same for everyone
+		seed_value = int(_plan.seed)
+		animal = str(_plan.animal)
+		bots = str(_plan.bots)
 	if not Match.SLICE_ANIMALS.has(animal):
 		animal = "octopus"
-	m = Match.create(seed_value, animal, 6, str(Boot.args.get("bots", "easy")))
+	m = Match.create(seed_value, animal, 6, bots)
 	if Boot.args.has("tide") and OS.is_debug_build():
 		m.sim.rules = m.sim.rules.duplicate(true)
 		m.sim.rules.tide.phase_ticks = maxi(60, int(Boot.args.tide) * 30)
@@ -292,6 +300,8 @@ func _finish() -> void:
 		"place": place, "kos": me.kos, "animal": str(m.sim.animals[me.id].id), "seed": m.sim.seed_value,
 		"survived_s": (me.died_tick if me.died_tick >= 0 else m.sim.tick) / 30, "players": m.sim.ents.size(),
 	}
+	if _plan.has("daily"):
+		Boot.last_result["daily"] = _plan.daily
 	get_tree().change_scene_to_file(RESULT_SCENE)
 
 

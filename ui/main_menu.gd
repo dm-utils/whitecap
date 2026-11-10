@@ -3,6 +3,8 @@ extends Control
 
 var _toast: Label
 var _toast_t := 0.0
+var _daily: Button
+var _daily_busy := false
 
 
 func _ready() -> void:
@@ -75,12 +77,12 @@ func _ready() -> void:
 	right.offset_left = -620
 	right.offset_right = -60
 	right.offset_bottom = -60
-	var daily := Button.new()
-	daily.theme_type_variation = "BlueButton"
-	daily.text = tr("MENU_DAILY")
-	daily.pressed.connect(_soon)
-	daily.visible = bool(Platform.get_config("show_daily", true)) # remote setting
-	right.add_child(daily)
+	_daily = Button.new()
+	_daily.theme_type_variation = "BlueButton"
+	_daily.pressed.connect(_play_daily)
+	_daily.visible = bool(Platform.get_config("show_daily", true)) # remote setting
+	right.add_child(_daily)
+	_update_daily()
 
 	# remote setting: event banner (owner-controlled text, empty = none)
 	var banner_text := str(Platform.get_config("event_banner", ""))
@@ -127,6 +129,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_update_daily()
 	if _toast_t > 0.0:
 		_toast_t -= delta
 		_toast.modulate.a = clampf(_toast_t * 2.0, 0.0, 1.0)
@@ -135,6 +138,26 @@ func _process(delta: float) -> void:
 func _soon() -> void:
 	_toast.text = tr("MENU_COMING_SOON")
 	_toast_t = 1.6
+
+
+## The daily button counts down to midnight UTC, when a new challenge starts for everyone.
+func _update_daily() -> void:
+	if _daily_busy:
+		return
+	var text := "%s
+%s" % [tr("MENU_DAILY"), tr("MENU_DAILY_ENDS").format({"time": Daily.countdown(Time.get_unix_time_from_system())})]
+	if _daily.text != text:
+		_daily.text = text
+
+
+func _play_daily() -> void:
+	if _daily_busy:
+		return
+	_daily_busy = true
+	_daily.disabled = true
+	_daily.text = tr("MENU_DAILY_LOADING")
+	Boot.next_match = await Daily.plan(Time.get_unix_time_from_system())
+	get_tree().change_scene_to_file(Boot.SCENES["match"])
 
 
 func _play() -> void:

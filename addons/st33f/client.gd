@@ -3,17 +3,19 @@ extends RefCounted
 ## Thin client for the St33f Engine API. Every call returns
 ##   {"ok": bool, "status": int, "data": Dictionary, "error": St33fError or null}
 ## and never throws. Calls are coroutines: `var r := await client.me()`.
-## Each service (accounts, feedback, ...) has its own host; tests can point all services at one base URL.
+## Each service (accounts, feedback, leaderboards, ...) has its own host; tests can point all services at one base URL.
 
 const URLS := {
 	"dev": {
 		"accounts": "https://st33f-accounts-dev.st33fd3v.workers.dev",
 		"feedback": "https://st33f-feedback-dev.st33fd3v.workers.dev",
+		"leaderboards": "https://st33f-leaderboards-dev.st33fd3v.workers.dev",
 	},
 	"acc": {},
 	"prod": {
 		"accounts": "https://api.steefbeest.nl",
 		"feedback": "https://feedback-api.steefbeest.nl",
+		"leaderboards": "https://scores.steefbeest.nl",
 	},
 }
 
@@ -138,3 +140,16 @@ func upload_attachment(report_id: String, kind: String, upload_token: String, by
 
 func my_feedback() -> Dictionary:
 	return await call_api(HTTPClient.METHOD_GET, "/v1/feedback/mine", null, true, "feedback")
+
+
+# --- leaderboards ---
+
+## Today's challenge (public): {game, day, seed, endsAt}. The same seed for everyone until midnight UTC.
+func get_daily() -> Dictionary:
+	return await call_api(HTTPClient.METHOD_GET, "/v1/games/%s/daily" % game, null, false, "leaderboards")
+
+
+## Start a run on a board ("day" or "week"), signed in: {token, board, seed, expiresAt}. The token goes back with
+## the score, so the server knows it handed out this seed to this player.
+func start_run(board: String) -> Dictionary:
+	return await call_api(HTTPClient.METHOD_POST, "/v1/games/%s/runs" % game, {"board": board}, true, "leaderboards")

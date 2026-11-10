@@ -5,6 +5,8 @@ BOOT_TAP,Tap to start,Tik om te beginnen
 BOOT_LOADING,Loading…,Laden…
 MENU_PLAY,PLAY,SPELEN
 MENU_DAILY,Daily Challenge,Dagelijkse uitdaging
+MENU_DAILY_ENDS,New in {time},Nieuw over {time}
+MENU_DAILY_LOADING,Loading…,Laden…
 MENU_COLLECTION,Collection,Collectie
 MENU_PATH,Treasure Path,Schattenpad
 MENU_LEADERBOARD,Leaderboard,Ranglijst
@@ -52,6 +54,9 @@ RESULT_NEXT,Next: {reward} at {at},Volgende: {reward} bij {at}
 RESULT_UNLOCKED,New on your path: {reward}!,Nieuw op je pad: {reward}!
 RESULT_AGAIN,Again,Nog een keer
 RESULT_MENU,Menu,Menu
+RESULT_DAILY_SCORE,Daily score {score} · best today {best},Dagscore {score} · beste vandaag {best}
+RESULT_DAILY_OFFLINE,Offline: this score does not count today.,Offline: deze score telt vandaag niet mee.
+RESULT_DAILY_SIGN_IN,Sign in to put your daily score on the leaderboard.,Log in om je dagscore op de ranglijst te zetten.
 PATH_COMPLETE,Path complete!,Pad voltooid!
 MENU_PEARLS,{count} pearls,{count} parels
 SETTINGS_TITLE,Settings,Instellingen

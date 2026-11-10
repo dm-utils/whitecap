@@ -50,5 +50,10 @@
     "radius": 650
   },
   "knockout_credit_ticks": 120,
+  "score": {
+    "place": [1000, 700, 500, 350, 200, 100],
+    "per_ko": 300,
+    "per_second": 2
+  },
   "calm_start_ticks": 150
 }

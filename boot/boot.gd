@@ -14,6 +14,8 @@ const SCENES := {
 var args: Dictionary = {}
 ## Handed from the match to the result screen.
 var last_result: Dictionary = {}
+## Handed from the menu to the match (e.g. the daily challenge): {seed, animal, bots, daily}. Taken once.
+var next_match: Dictionary = {}
 
 
 func _ready() -> void:
