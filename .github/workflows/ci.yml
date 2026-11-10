@@ -68,6 +68,13 @@ jobs:
       - name: Tests
         run: timeout 300 godot --headless --path . res://tests/run_tests.tscn -- --no-crash-reports --no-network
 
+      - name: Replay check runs headless on Linux (sample written by the tests)
+        run: |
+          out=$(timeout 300 godot --headless --path . res://tools/verify/verify_scores.tscn -- \
+            --in="$HOME/.local/share/godot/app_userdata/Getij/verify_sample.json" --out="$RUNNER_TEMP/verdicts.json")
+          echo "$out"
+          echo "$out" | grep -q "4 scores, 1 verified, 3 rejected"
+
       - name: Push setting declarations to the dev platform (develop only, needs the deploy key)
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         env:
