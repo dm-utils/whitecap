@@ -533,6 +533,11 @@ func test_score_check() -> void:
 	check(not by.sc_animal.ok and by.sc_animal.reason == "not_the_animal_of_the_day", "another animal on the day board is rejected")
 	check(not by.sc_bots.ok and by.sc_bots.reason == "wrong_bots_for_week", "week board with harder-to-check bots is rejected")
 	check(not by.sc_lie.ok and by.sc_lie.reason == "result_mismatch", "a better place than played is rejected")
+	# replays recorded on Windows (tests/golden/replays_windows.json) must give the same verdicts on every platform
+	var golden: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://tests/golden/replays_windows.json"))
+	var gv := ScoreCheck.run(golden)
+	check(gv.verdicts.size() == 4 and gv.verdicts[0].ok and gv.verdicts.slice(1).all(func(v): return not v.ok),
+		"replays recorded on Windows verify the same here (%s)" % JSON.stringify(gv.verdicts))
 	var f := FileAccess.open("user://verify_sample.json", FileAccess.WRITE)
 	f.store_string(JSON.stringify(pending))
 	f.close()
