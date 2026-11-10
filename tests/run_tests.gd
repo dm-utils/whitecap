@@ -39,6 +39,7 @@ func _ready() -> void:
 	test_score_check()
 	test_names_mastery_profiles()
 	await test_my_data()
+	test_touch_and_safe_area()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -616,6 +617,56 @@ func test_my_data() -> void:
 		DirAccess.remove_absolute(path)
 	for i in range(1, 8):
 		check(tr("PRIVACY_P%d" % i) != "PRIVACY_P%d" % i, "privacy paragraph %d has a text" % i)
+
+
+## Phone: two thumbs at once (move + attack), dead zone, the special button keeps its touches; safe-area insets.
+func test_touch_and_safe_area() -> void:
+	var t := TouchControls.new()
+	t.size = Vector2(1920, 1080)
+	var ev := func(index: int, pos: Vector2, pressed: bool) -> InputEventScreenTouch:
+		var e := InputEventScreenTouch.new()
+		e.index = index
+		e.position = pos
+		e.pressed = pressed
+		return e
+	var drag := func(index: int, pos: Vector2) -> InputEventScreenDrag:
+		var e := InputEventScreenDrag.new()
+		e.index = index
+		e.position = pos
+		return e
+	t.handle(ev.call(0, Vector2(300, 700), true))
+	t.handle(drag.call(0, Vector2(310, 700)))
+	check(t.move == Vector2.ZERO, "a resting thumb does not walk (dead zone)")
+	t.handle(drag.call(0, Vector2(600, 700)))
+	check(is_equal_approx(t.move.x, 1.0) and is_zero_approx(t.move.y), "joystick: full speed to the right, capped")
+	t.handle(ev.call(1, t.attack_center() + Vector2(20, 10), true))
+	check(t.attacking and t.move.x > 0.9, "second thumb attacks while the first keeps moving")
+	t.handle(ev.call(0, Vector2(600, 700), false))
+	check(t.move == Vector2.ZERO and t.attacking, "lifting the move thumb stops walking, attack holds")
+	t.handle(ev.call(1, Vector2.ZERO, false))
+	check(not t.attacking, "lifting the attack thumb stops attacking")
+	var special := Button.new()
+	special.size = Vector2(220, 110)
+	special.position = Vector2(100, 100)
+	t.add_child(special)
+	t.blocked.append(special)
+	t.handle(ev.call(2, Vector2(150, 150), true))
+	t.handle(drag.call(2, Vector2(450, 150)))
+	check(t.move == Vector2.ZERO, "a touch on the special button is left to the button")
+	t.handle(ev.call(3, Vector2(1500, 300), true))
+	t.handle(drag.call(3, Vector2(1800, 300)))
+	check(t.move == Vector2.ZERO, "the right half does not start a joystick")
+	t.free()
+
+	var keys := preload("res://view/match_view.gd")
+	check(keys.choose_controls({}, {}, true) == "touch" and keys.choose_controls({}, {}, false) == "keys", "touchscreen picks touch by default")
+	check(keys.choose_controls({"settings": {"controls": "mouse"}}, {}, true) == "mouse", "the player's choice wins")
+	check(keys.choose_controls({}, {"controls": "touch"}, false) == "touch", "debug argument controls=touch")
+
+	var i := SafeArea.from_rects(Rect2(88, 0, 2400 - 88 - 88, 1080 - 63), Vector2(2400, 1080), Vector2(1920, 1080))
+	check(is_equal_approx(i.left, 70.4) and is_equal_approx(i.right, 70.4) and is_zero_approx(i.top) and is_equal_approx(i.bottom, 63.0), "notch + home bar as insets in viewport units (%s)" % str(i))
+	check(SafeArea.from_rects(Rect2(0, 0, 1920, 1080), Vector2(1920, 1080), Vector2(1920, 1080)).left == 0.0, "desktop: no insets")
+	check(SafeArea.parse("40,20,40,30").bottom == 30.0, "debug safe=l,t,r,b")
 
 
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).

@@ -2,7 +2,8 @@ extends Node2D
 ## The match on screen. Reads the sim, never changes it: input becomes a command per tick, the sim steps at a
 ## fixed 30 Hz, and the view interpolates between ticks. Events (hits, KOs, tide) drive effects and messages.
 ## Debug entry: --scene=match --seed=N [--animal=gull] [--bots=easy|normal|hard];
-## debug builds also take [--tide=<seconds per phase>] [--god=1] (smoke test).
+## debug builds also take [--tide=<seconds per phase>] [--god=1] (smoke test). Any build: [--controls=touch]
+## [--safe=l,t,r,b] to see the phone layout on a PC.
 
 const PX := 0.08 # screen pixels per milli-tile: 80 px per tile, ~24 x 13 tiles visible at 1920 x 1080
 const DT := 1.0 / 30.0
@@ -19,7 +20,8 @@ var overlay: Node2D # projectiles, effects, bars, target (z 2)
 var cam: Camera2D
 var _cutouts := {} # id -> Cutout
 var hud: Control
-var controls := "keys"
+var controls := "keys" # keys | mouse | touch
+var touch: TouchControls
 
 var _acc := 0.0
 var _prev := {} # id -> Vector2 (milli-tiles) at the previous tick
@@ -64,7 +66,7 @@ func _ready() -> void:
 		# debug builds only: the smoke test needs the player alive to photograph later tide phases
 		m.sim.ents[m.human].hp = 100000000
 		m.sim.ents[m.human].max_hp = 100000000
-	controls = str(profile.get("settings", {}).get("controls", "keys"))
+	controls = choose_controls(profile, Boot.args, DisplayServer.is_touchscreen_available())
 	_remember_positions()
 
 	var sea := Node2D.new() # the open sea behind everything
@@ -185,7 +187,10 @@ func _command() -> Dictionary:
 	var cmd := {"m": -1, "a": -1, "s": -1}
 	var mx := int(_key(KEY_D) or _key(KEY_RIGHT)) - int(_key(KEY_A) or _key(KEY_LEFT))
 	var my := int(_key(KEY_S) or _key(KEY_DOWN)) - int(_key(KEY_W) or _key(KEY_UP))
-	if mx != 0 or my != 0:
+	if controls == "touch" and touch != null and touch.move != Vector2.ZERO:
+		cmd.m = Fx.atan2_a(int(touch.move.y * 1000), int(touch.move.x * 1000))
+		_last_move = cmd.m
+	elif mx != 0 or my != 0:
 		cmd.m = Fx.atan2_a(my * 1000, mx * 1000)
 		_last_move = cmd.m
 	var target := _auto_target(e)
@@ -199,7 +204,11 @@ func _command() -> Dictionary:
 	elif target != null:
 		aim = Fx.atan2_a(target.y - e.y, target.x - e.x)
 		dist = Fx.dist(target.x - e.x, target.y - e.y)
-	var attacking := _key(KEY_SPACE) if controls == "keys" else Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var attacking := _key(KEY_SPACE)
+	if controls == "mouse":
+		attacking = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	elif controls == "touch":
+		attacking = touch != null and touch.attacking or _key(KEY_SPACE)
 	if attacking:
 		cmd.a = aim
 	if _pending_special:
@@ -370,7 +379,7 @@ func _draw_overlay() -> void:
 	for e in sim.ents:
 		if e.alive:
 			_draw_bars(e)
-	if _target >= 0 and controls == "keys" and sim.ents[_target].alive:
+	if _target >= 0 and controls != "mouse" and sim.ents[_target].alive:
 		overlay.draw_arc(_pos_px(sim.ents[_target]), 46.0, _t * 2.0, _t * 2.0 + TAU * 0.85, 32, Color("FFC530"), 4.0)
 
 
@@ -436,6 +445,7 @@ func _build_hud() -> void:
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(hud)
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	SafeArea.apply(hud) # out of notches and rounded corners
 
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 20)
@@ -478,9 +488,20 @@ func _build_hud() -> void:
 	_special.offset_top = -170
 	_special.offset_right = -60
 	_special.offset_bottom = -60
+	if controls == "touch":
+		touch = TouchControls.new()
+		hud.add_child(touch)
+		touch.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		hud.move_child(touch, 0) # below the buttons
+		touch.blocked.append(_special)
+		# the special button sits above the attack button, within thumb reach
+		_special.offset_top = -170 - 2.0 * TouchControls.ATTACK_RADIUS - 60.0
+		_special.offset_bottom = -60 - 2.0 * TouchControls.ATTACK_RADIUS - 60.0
 
 	var hint := Label.new()
-	hint.text = tr("HUD_CONTROLS_KEYS") if controls == "keys" else tr("HUD_CONTROLS_MOUSE")
+	hint.text = {"keys": tr("HUD_CONTROLS_KEYS"), "mouse": tr("HUD_CONTROLS_MOUSE"), "touch": tr("HUD_CONTROLS_TOUCH")}.get(controls, "")
+	if controls == "touch": # the hint sits where the thumb goes: show it at the start only
+		get_tree().create_timer(4.0).timeout.connect(hint.hide)
 	hint.label_settings = UiTheme.heading(26, Color.WHITE, 6)
 	hud.add_child(hint)
 	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
@@ -549,3 +570,13 @@ func _attack_sound(id: int, type: String, kind: String) -> String:
 		return {"dash": "dash", "ink": "ink", "dive": "dive"}.get(kind, "hit")
 	var animal: Dictionary = m.sim.animals[id]
 	return ATTACK_SOUNDS.get(str(animal.get("attack", {}).get("kind", "")), "hit")
+
+
+## keys | mouse | touch: the debug argument, else the player's choice, else touch on a touchscreen (pure, tested).
+static func choose_controls(profile: Dictionary, args: Dictionary, touchscreen: bool) -> String:
+	if ["keys", "mouse", "touch"].has(str(args.get("controls", ""))):
+		return str(args.controls)
+	var chosen := str(profile.get("settings", {}).get("controls", ""))
+	if ["keys", "mouse", "touch"].has(chosen):
+		return chosen
+	return "touch" if touchscreen else "keys"

@@ -132,6 +132,29 @@ def main() -> int:
         if hashlib.sha256(page.screenshot(clip=top)).hexdigest() == before:
             failures.append("F8 did not open the report overlay")
 
+        # phone layout: touch controls inside a fake safe area; left thumb walks, right thumb holds attack
+        page.goto(f"http://127.0.0.1:{port}/index.html?scene=match&seed=123&god=1&controls=touch&safe=60,0,60,30")
+        page.wait_for_selector("#loader.done", state="attached", timeout=60000)
+        page.wait_for_timeout(2500)  # past the drop-in intro
+        cdp = page.context.new_cdp_session(page)
+        k = 1280 / 1920  # game units -> CSS px (the canvas fills the 1280 x 720 page)
+        attack = ((1920 - 60 - 60 - 60 - 115 + 60) * k, (1080 - 30 - 50 - 115) * k)
+        thumb = (300 * k, 700 * k)
+        def touch(kind, points):
+            cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [{"x": x, "y": y, "id": i} for i, (x, y) in points]})
+        before = canvas_hash(page)
+        touch("touchStart", [(0, thumb)])
+        touch("touchStart", [(0, thumb), (1, attack)])
+        for step in range(1, 9):
+            touch("touchMove", [(0, (thumb[0] + step * 12, thumb[1] - step * 6)), (1, attack)])
+            page.wait_for_timeout(120)
+        if shots:
+            page.screenshot(path=f"{shots}/web-touch.png")
+        page.wait_for_timeout(800)
+        touch("touchEnd", [])
+        if canvas_hash(page) == before:
+            failures.append("touch: nothing changed while two thumbs were down")
+
         # Dutch: texts are ~30 % longer, so the layouts must still fit (checked by eye in the contact sheet)
         for scene, extra, name in [("menu", "&lang=nl", "web-menu-nl"), ("settings", "&lang=nl", "web-settings-nl"),
                                    ("match", "&lang=nl&seed=123&god=1", "web-match-nl"), ("zoo", "", "web-zoo"),

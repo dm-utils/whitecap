@@ -9,6 +9,7 @@ var _code_edit: LineEdit
 var _resend: Button
 var _resend_left := 0.0
 var _busy := false
+const MatchViewScript := preload("res://view/match_view.gd")
 var _delete: Button
 var _delete_armed := 0.0
 var _privacy_status: Label
@@ -64,8 +65,9 @@ func _ready() -> void:
 	var controls := OptionButton.new()
 	controls.add_item(tr("CONTROLS_KEYS"))
 	controls.add_item(tr("CONTROLS_MOUSE"))
+	controls.add_item(tr("CONTROLS_TOUCH"))
 	var profile: Dictionary = Platform.load_profile()
-	controls.selected = 1 if str(profile.get("settings", {}).get("controls", "keys")) == "mouse" else 0
+	controls.selected = maxi(0, ["keys", "mouse", "touch"].find(MatchViewScript.choose_controls(profile, {}, DisplayServer.is_touchscreen_available())))
 	controls.item_selected.connect(_on_controls)
 	row.add_child(controls)
 
@@ -202,7 +204,7 @@ func _heading(text: String) -> Label:
 func _on_controls(index: int) -> void:
 	var p: Dictionary = Platform.load_profile()
 	var s: Dictionary = p.get("settings", {})
-	s["controls"] = "mouse" if index == 1 else "keys"
+	s["controls"] = ["keys", "mouse", "touch"][clampi(index, 0, 2)]
 	p["settings"] = s
 	Platform.save_profile(p)
 
