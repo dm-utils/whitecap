@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ct037hrhryli5"
-path="res://.godot/imported/gull.svg-efeb2594ae676a4a9d95d21dbc614f02.ctex"
+uid="uid://bncc6e7g8npb8"
+path="res://.godot/imported/limb_fr.svg-f5b14838bed31e14053ca61cafd976ca.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/animals/gull.svg"
-dest_files=["res://.godot/imported/gull.svg-efeb2594ae676a4a9d95d21dbc614f02.ctex"]
+source_file="res://assets/looks/octopus_midnight/limb_fr.svg"
+dest_files=["res://.godot/imported/limb_fr.svg-f5b14838bed31e14053ca61cafd976ca.ctex"]
 
 [params]
 
@@ -38,6 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=1.0
+svg/scale=2.0
 editor/scale_with_editor_scale=false
 editor/convert_colors_with_editor_theme=false

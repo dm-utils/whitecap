@@ -1,0 +1,82 @@
+{
+  "id": "gull",
+  "size": 200,
+  "origin": [
+    100,
+    172
+  ],
+  "parts": [
+    {
+      "name": "limb_bl",
+      "pivot": [
+        86,
+        150
+      ],
+      "parent": "body",
+      "z": -2
+    },
+    {
+      "name": "limb_br",
+      "pivot": [
+        108,
+        150
+      ],
+      "parent": "body",
+      "z": -2
+    },
+    {
+      "name": "tail",
+      "pivot": [
+        58,
+        122
+      ],
+      "parent": "body",
+      "z": -1
+    },
+    {
+      "name": "body",
+      "pivot": [
+        94,
+        162
+      ],
+      "parent": "",
+      "z": 0
+    },
+    {
+      "name": "limb_fl",
+      "pivot": [
+        70,
+        116
+      ],
+      "parent": "body",
+      "z": 1
+    },
+    {
+      "name": "head",
+      "pivot": [
+        124,
+        108
+      ],
+      "parent": "body",
+      "z": 2
+    },
+    {
+      "name": "accessory",
+      "pivot": [
+        156,
+        84
+      ],
+      "parent": "head",
+      "z": 3
+    },
+    {
+      "name": "eye_r",
+      "pivot": [
+        140,
+        72
+      ],
+      "parent": "head",
+      "z": 3
+    }
+  ]
+}

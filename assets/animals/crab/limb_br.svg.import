@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://x5gbehcnsxl4"
-path="res://.godot/imported/crab.svg-f5c8bc942f09199a4652259424faf697.ctex"
+uid="uid://c482fk7beg0kp"
+path="res://.godot/imported/limb_br.svg-9abebdbeb26404ef0a7e5912cc2980b8.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/animals/crab.svg"
-dest_files=["res://.godot/imported/crab.svg-f5c8bc942f09199a4652259424faf697.ctex"]
+source_file="res://assets/animals/crab/limb_br.svg"
+dest_files=["res://.godot/imported/limb_br.svg-9abebdbeb26404ef0a7e5912cc2980b8.ctex"]
 
 [params]
 
@@ -38,6 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=1.0
+svg/scale=2.0
 editor/scale_with_editor_scale=false
 editor/convert_colors_with_editor_theme=false

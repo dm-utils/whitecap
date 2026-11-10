@@ -27,6 +27,7 @@ func _ready() -> void:
 	test_every_asset_has_credits()
 	test_setting_declarations()
 	test_every_language_complete()
+	test_cutouts_build()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -312,6 +313,25 @@ func test_result_bookkeeping() -> void:
 	backend.profile_path = saved_path
 
 
+## Every slice animal builds from its rig; part names the code binds to exist; looks build too.
+func test_cutouts_build() -> void:
+	for id in Match.SLICE_ANIMALS:
+		var c := Cutout.new()
+		c.build(id)
+		check(c.joints.has("body") and c.joints.size() >= 7, "%s builds from its rig (%d parts)" % [id, c.joints.size()])
+		for j in c.joints.values():
+			var sprite: Sprite2D = j.get_child(0)
+			check(sprite.texture != null, "%s/%s has a texture" % [id, j.name])
+		c.trigger("attack")
+		c._process(0.1)
+		c.free()
+	for look in [["crab", "crab_sunset"], ["octopus", "octopus_midnight"]]:
+		var c := Cutout.new()
+		c.build(look[0], look[1])
+		check((c.joints.body.get_child(0) as Sprite2D).texture != null, "look %s builds" % look[1])
+		c.free()
+
+
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).
 func test_every_language_complete() -> void:
 	var f := FileAccess.open("res://i18n/strings.csv", FileAccess.READ)
@@ -369,9 +389,19 @@ func test_setting_declarations() -> void:
 ## Asset policy: no file under assets/ without a credits row (source, author, licence, date).
 func test_every_asset_has_credits() -> void:
 	var credits := FileAccess.get_file_as_string("res://assets/credits.csv")
+	# a row may name a file, or a folder ending in "/" for generated sets (e.g. cutout parts)
+	var folders: Array = []
+	for line in credits.split("\n"):
+		var first := line.split(",")[0]
+		if first.ends_with("/"):
+			folders.append(first)
 	for path in files_under("res://assets/", [".svg", ".png", ".jpg", ".webp", ".ttf", ".otf", ".ogg", ".wav", ".glb", ".gltf"]):
 		var rel: String = str(path).trim_prefix("res://")
-		check(credits.contains("\n" + rel + ","), "credits row for " + rel)
+		var covered := credits.contains("\n" + rel + ",") or folders.any(func(f): return rel.begins_with(f))
+		check(covered, "credits row for " + rel)
+	# cutout parts are imported at 2x so the big menu animal stays sharp
+	for path in files_under("res://assets/animals/", [".svg.import"]) + files_under("res://assets/looks/", [".svg.import"]):
+		check(FileAccess.get_file_as_string(path).contains("svg/scale=2.0"), "imported at 2x: " + str(path))
 
 
 # --- helpers ---

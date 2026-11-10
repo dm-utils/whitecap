@@ -7,16 +7,15 @@ extends Node2D
 const PX := 0.08 # screen pixels per milli-tile: 80 px per tile, ~24 x 13 tiles visible at 1920 x 1080
 const DT := 1.0 / 30.0
 const MAX_STEPS_PER_FRAME := 3
-const TEX := {
-	"crab": preload("res://assets/animals/crab.svg"),
-	"octopus": preload("res://assets/animals/octopus.svg"),
-	"gull": preload("res://assets/animals/gull.svg"),
-}
 const RESULT_SCENE := "res://ui/result_screen.tscn"
+const ANIMAL_PX := 96.0 # on-screen size of an animal (styleguide: recognisable silhouette)
 
 var m: Match
-var board: Node2D
+var board: Node2D # island, snacks, shadows and rings (z 0)
+var actors: Node2D # cutout animals, sorted by y (z 1)
+var overlay: Node2D # projectiles, effects, bars, target (z 2)
 var cam: Camera2D
+var _cutouts := {} # id -> Cutout
 var hud: Control
 var controls := "keys"
 
@@ -27,7 +26,6 @@ var _ending := -1.0
 var _pending_special := false
 var _last_move := 0
 var _target := -1
-var _flash := {} # id -> seconds
 var _fx: Array = [] # {kind, pos (px), t}
 var _msg := ""
 var _msg_t := 0.0
@@ -57,6 +55,21 @@ func _ready() -> void:
 	board = Node2D.new()
 	board.draw.connect(_draw_board)
 	add_child(board)
+	actors = Node2D.new()
+	actors.y_sort_enabled = true
+	actors.z_index = 1
+	add_child(actors)
+	for e in m.sim.ents:
+		var c := Cutout.new()
+		c.size_px = ANIMAL_PX
+		actors.add_child(c)
+		c.build(str(m.sim.animals[e.id].id))
+		_cutouts[e.id] = c
+	overlay = Node2D.new()
+	overlay.z_index = 2
+	overlay.draw.connect(_draw_overlay)
+	add_child(overlay)
+	_update_cutouts()
 	cam = Camera2D.new()
 	cam.limit_left = 0
 	cam.limit_top = 0
@@ -95,15 +108,15 @@ func _process(delta: float) -> void:
 		if _ending <= 0.0:
 			_finish()
 			return
-	for id in _flash.keys():
-		_flash[id] = float(_flash[id]) - delta
 	for f in _fx:
 		f.t += delta
 	_fx = _fx.filter(func(f): return f.t < 0.7)
 	_msg_t -= delta
+	_update_cutouts()
 	_update_camera(delta)
 	_update_hud()
 	board.queue_redraw()
+	overlay.queue_redraw()
 	hud.queue_redraw()
 	if OS.is_debug_build():
 		_fps_t += delta
@@ -210,10 +223,13 @@ func _on_special_pressed() -> void:
 func _handle_events() -> void:
 	for ev in m.sim.events:
 		match str(ev.type):
+			"attack", "special":
+				_cutouts[int(ev.id)].trigger("attack")
 			"hit":
-				_flash[int(ev.id)] = 0.12
+				_cutouts[int(ev.id)].trigger("hit")
 				_fx.append({"kind": "spark", "pos": Vector2(ev.x, ev.y) * PX, "t": 0.0})
 			"ko":
+				_cutouts[int(ev.id)].trigger("ko")
 				_fx.append({"kind": "splash", "pos": Vector2(ev.x, ev.y) * PX, "t": 0.0})
 				if int(ev.id) == m.human:
 					_say(tr("HUD_WASHED_AWAY"), 1.5)
@@ -228,6 +244,9 @@ func _handle_events() -> void:
 			"sudden_death":
 				_say(tr("HUD_SUDDEN_DEATH"), 1.5)
 			"finished":
+				for e in m.sim.ents:
+					if e.alive and e.place == 1:
+						_cutouts[e.id].trigger("win")
 				if m.sim.ents[m.human].place == 1:
 					_say(tr("HUD_LAST_DRY"), 1.5)
 
@@ -298,26 +317,39 @@ func _draw_board() -> void:
 	for v in sim.dives:
 		var col := ME if v.owner == m.human else FOE
 		board.draw_arc(Vector2(v.x, v.y) * PX, v.radius * PX, 0, TAU, 40, col, 4.0)
-	for e in _sorted_alive():
-		_draw_animal(e)
+	# shadows and team rings under the animals (styleguide: cyan = you, coral = others)
+	for e in m.sim.ents:
+		if e.alive:
+			board.draw_set_transform(_pos_px(e) + Vector2(0, 20), 0.0, Vector2(1.0, 0.38))
+			board.draw_circle(Vector2.ZERO, 26.0, Color(0, 0, 0, 0.18))
+			board.draw_arc(Vector2.ZERO, 32.0, 0, TAU, 40, ME if e.id == m.human else FOE, 9.0)
+			board.draw_set_transform(Vector2.ZERO)
+
+
+## Above the animals: projectiles, effects, health bars, "YOU", charges and the auto-aim target.
+func _draw_overlay() -> void:
+	var sim := m.sim
 	for p in sim.projs:
 		var pos := Vector2(p.x, p.y) * PX
-		board.draw_circle(pos, p.radius * PX * 0.55 + 4.0, INK)
-		board.draw_circle(pos, p.radius * PX * 0.55 + 1.0, ME if p.owner == m.human else FOE)
+		overlay.draw_circle(pos, p.radius * PX * 0.55 + 4.0, INK)
+		overlay.draw_circle(pos, p.radius * PX * 0.55 + 1.0, ME if p.owner == m.human else FOE)
 	for f in _fx:
 		var k: float = f.t / 0.7
 		match str(f.kind):
 			"splash":
 				for i in 3:
-					board.draw_arc(f.pos, 12.0 + k * 60.0 + i * 12.0, 0, TAU, 32, Color(1, 1, 1, 1.0 - k), 4.0)
+					overlay.draw_arc(f.pos, 12.0 + k * 60.0 + i * 12.0, 0, TAU, 32, Color(1, 1, 1, 1.0 - k), 4.0)
 			"boom":
-				board.draw_circle(f.pos, 156.0 * (0.6 + k * 0.5), Color(1.0, 0.77, 0.19, 0.5 * (1.0 - k)))
+				overlay.draw_circle(f.pos, 156.0 * (0.6 + k * 0.5), Color(1.0, 0.77, 0.19, 0.5 * (1.0 - k)))
 			"heal":
-				board.draw_circle(f.pos + Vector2(0, -k * 30.0), 8.0, Color(0.36, 0.84, 0.42, 1.0 - k))
+				overlay.draw_circle(f.pos + Vector2(0, -k * 30.0), 8.0, Color(0.36, 0.84, 0.42, 1.0 - k))
 			_:
-				board.draw_arc(f.pos, 4.0 + k * 16.0, 0, TAU, 16, Color(1, 1, 1, 1.0 - k), 2.0)
-	if _target >= 0 and controls == "keys" and m.sim.ents[_target].alive:
-		board.draw_arc(_pos_px(m.sim.ents[_target]), 46.0, _t * 2.0, _t * 2.0 + TAU * 0.85, 32, Color("FFC530"), 4.0)
+				overlay.draw_arc(f.pos, 4.0 + k * 16.0, 0, TAU, 16, Color(1, 1, 1, 1.0 - k), 2.0)
+	for e in sim.ents:
+		if e.alive:
+			_draw_bars(e)
+	if _target >= 0 and controls == "keys" and sim.ents[_target].alive:
+		overlay.draw_arc(_pos_px(sim.ents[_target]), 46.0, _t * 2.0, _t * 2.0 + TAU * 0.85, 32, Color("FFC530"), 4.0)
 
 
 func _draw_foam(tx: int, ty: int, r: Rect2, _d: int) -> void:
@@ -335,57 +367,40 @@ func _draw_foam(tx: int, ty: int, r: Rect2, _d: int) -> void:
 		board.draw_rect(Rect2(r.position + Vector2(r.size.x - f, 0), Vector2(f, r.size.y)), FOAM)
 
 
-func _sorted_alive() -> Array:
-	var list: Array = []
-	for e in m.sim.ents:
-		if e.alive:
-			list.append(e)
-	list.sort_custom(func(a, b): return a.y < b.y)
-	return list
-
-
-func _draw_animal(e: MatchSim.Ent) -> void:
+func _draw_bars(e: MatchSim.Ent) -> void:
 	var p := _pos_px(e)
-	var id := str(m.sim.animals[e.id].id)
-	var flyer := str(m.sim.animals[e.id].type) == "flyer"
-	var depth := m.sim.depth_at(e.x, e.y)
 	var mine := e.id == m.human
-	var bob := sin(_t * 6.0 + e.id) * 2.0 - (12.0 if flyer else 0.0)
-	# shadow and team ring (styleguide: cyan = you, coral = others)
-	board.draw_set_transform(p + Vector2(0, 20), 0.0, Vector2(1.0, 0.38))
-	board.draw_circle(Vector2.ZERO, 26.0, Color(0, 0, 0, 0.18))
-	board.draw_arc(Vector2.ZERO, 32.0, 0, TAU, 40, ME if mine else FOE, 9.0)
-	board.draw_set_transform(Vector2.ZERO)
-	# the animal (placeholder art at the real scale), flipped toward where it aims
-	var tex: Texture2D = TEX.get(id)
-	var size := 84.0
-	var flip := -1.0 if Fx.cos_a(e.aim) < 0 else 1.0
-	var tint := Color(1, 1, 1, 0.55) if float(_flash.get(e.id, 0.0)) > 0.0 else Color.WHITE
-	board.draw_set_transform(p + Vector2(0, -14 + bob), 0.0, Vector2(flip, 1.0))
-	board.draw_texture_rect(tex, Rect2(-size / 2, -size / 2, size, size), false, tint)
-	board.draw_set_transform(Vector2.ZERO)
-	if depth >= 1 and not flyer:
-		board.draw_set_transform(p + Vector2(0, 12), 0.0, Vector2(1.0, 0.4))
-		board.draw_circle(Vector2.ZERO, 36.0, Color(SHALLOW if depth == 1 else DEEP, 0.85))
-		board.draw_arc(Vector2.ZERO, 36.0, 0, TAU, 32, FOAM, 4.0)
-		board.draw_set_transform(Vector2.ZERO)
-	# health bar
+	var lift := 22.0 if str(m.sim.animals[e.id].type) == "flyer" else 0.0
 	var w := 56.0
-	var top := p + Vector2(-w / 2, -70 + bob)
-	board.draw_rect(Rect2(top - Vector2(2, 2), Vector2(w + 4, 11)), INK)
+	var top := p + Vector2(-w / 2, -86 - lift)
+	overlay.draw_rect(Rect2(top - Vector2(2, 2), Vector2(w + 4, 11)), INK)
 	var f := clampf(float(e.hp) / float(e.max_hp), 0.0, 1.0)
 	var col := FOE
 	if mine:
 		col = Color("5BD66B") if f > 0.5 else (Color("FFD23F") if f > 0.25 else FOE)
-	board.draw_rect(Rect2(top, Vector2(w * f, 7)), col)
+	overlay.draw_rect(Rect2(top, Vector2(w * f, 7)), col)
 	if mine:
 		var font := UiTheme.title_font()
-		board.draw_string_outline(font, top + Vector2(0, -6), tr("HUD_YOU"), HORIZONTAL_ALIGNMENT_CENTER, w, 20, 6, INK)
-		board.draw_string(font, top + Vector2(0, -6), tr("HUD_YOU"), HORIZONTAL_ALIGNMENT_CENTER, w, 20, Color.WHITE)
+		overlay.draw_string_outline(font, top + Vector2(-20, -10), tr("HUD_YOU"), HORIZONTAL_ALIGNMENT_CENTER, w + 40, 24, 7, INK)
+		overlay.draw_string(font, top + Vector2(-20, -10), tr("HUD_YOU"), HORIZONTAL_ALIGNMENT_CENTER, w + 40, 24, Color.WHITE)
 		for i in int(m.sim.rules.attack.charges):
 			var c := p + Vector2(-16 + i * 16, 42)
-			board.draw_circle(c, 7.0, INK)
-			board.draw_circle(c, 5.0, Color("FFC530") if i < e.charges else Color(1, 1, 1, 0.4))
+			overlay.draw_circle(c, 7.0, INK)
+			overlay.draw_circle(c, 5.0, Color("FFC530") if i < e.charges else Color(1, 1, 1, 0.4))
+
+
+## Cutout animals follow the sim: position (interpolated), walking, swimming, facing.
+func _update_cutouts() -> void:
+	for e in m.sim.ents:
+		var c: Cutout = _cutouts[e.id]
+		var flyer := str(m.sim.animals[e.id].type) == "flyer"
+		var pos := _pos_px(e) + Vector2(0, 18 - (14.0 if flyer else 0.0))
+		c.moving = c.position.distance_to(pos) > 0.6
+		c.position = pos
+		c.swimming = e.alive and not flyer and m.sim.depth_at(e.x, e.y) >= 1
+		c.facing = -1.0 if Fx.cos_a(e.aim) < 0 else 1.0
+		if not e.alive and c.is_gone():
+			c.visible = false
 
 
 # --- HUD ---

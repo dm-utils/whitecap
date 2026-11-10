@@ -33,20 +33,36 @@ func _ready() -> void:
 			b.pressed.connect(_soon)
 		menu.add_child(b)
 
-	# centre: selected animal (art arrives in phase 6)
+	# centre: the selected animal, big and breathing on a little shadow
+	var shadow := Panel.new()
+	var shadow_box := StyleBoxFlat.new()
+	shadow_box.bg_color = Color(UiTheme.INK, 0.18)
+	shadow_box.set_corner_radius_all(60)
+	shadow.add_theme_stylebox_override("panel", shadow_box)
+	shadow.size = Vector2(260, 44)
+	shadow.position = Vector2(960 - 130, 640 - 22)
+	shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(shadow)
+	var hero := Cutout.new()
+	hero.size_px = 380.0
+	add_child(hero)
+	hero.build(str(animal.get("id", "octopus")))
+	hero.position = Vector2(960, 650)
+
 	var name_label := Label.new()
 	name_label.text = tr(str(animal.get("name_key", "")))
 	name_label.label_settings = UiTheme.heading(64, UiTheme.INK, 0)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(name_label)
-	name_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	name_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	name_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	name_label.position.y -= 330
 
 	var count := Label.new()
 	count.text = tr("MENU_ANIMALS_LOADED").format({"count": Content.animals().size()})
 	add_child(count)
-	count.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	count.position.y += 70
+	count.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	count.position.y -= 260
 	count.grow_horizontal = Control.GROW_DIRECTION_BOTH
 
 	# right: daily + play

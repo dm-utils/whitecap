@@ -1,0 +1,82 @@
+{
+  "id": "crab",
+  "size": 200,
+  "origin": [
+    100,
+    172
+  ],
+  "parts": [
+    {
+      "name": "limb_bl",
+      "pivot": [
+        54,
+        128
+      ],
+      "parent": "body",
+      "z": -2
+    },
+    {
+      "name": "limb_br",
+      "pivot": [
+        146,
+        128
+      ],
+      "parent": "body",
+      "z": -2
+    },
+    {
+      "name": "body",
+      "pivot": [
+        100,
+        160
+      ],
+      "parent": "",
+      "z": 0
+    },
+    {
+      "name": "eye_l",
+      "pivot": [
+        84,
+        94
+      ],
+      "parent": "body",
+      "z": 1
+    },
+    {
+      "name": "eye_r",
+      "pivot": [
+        116,
+        94
+      ],
+      "parent": "body",
+      "z": 1
+    },
+    {
+      "name": "mouth",
+      "pivot": [
+        100,
+        130
+      ],
+      "parent": "body",
+      "z": 1
+    },
+    {
+      "name": "claw_l",
+      "pivot": [
+        50,
+        112
+      ],
+      "parent": "body",
+      "z": 2
+    },
+    {
+      "name": "claw_r",
+      "pivot": [
+        150,
+        112
+      ],
+      "parent": "body",
+      "z": 2
+    }
+  ]
+}

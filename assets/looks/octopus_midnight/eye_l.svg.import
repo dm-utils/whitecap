@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dyk55mup52jxq"
-path="res://.godot/imported/puffer.svg-703adbf6b2fd39aae9ead088a13c86c7.ctex"
+uid="uid://cmh7xo6iso6u3"
+path="res://.godot/imported/eye_l.svg-7392a31b0bc83388a2f045df4ca14488.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/animals/puffer.svg"
-dest_files=["res://.godot/imported/puffer.svg-703adbf6b2fd39aae9ead088a13c86c7.ctex"]
+source_file="res://assets/looks/octopus_midnight/eye_l.svg"
+dest_files=["res://.godot/imported/eye_l.svg-7392a31b0bc83388a2f045df4ca14488.ctex"]
 
 [params]
 
@@ -38,6 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=1.0
+svg/scale=2.0
 editor/scale_with_editor_scale=false
 editor/convert_colors_with_editor_theme=false

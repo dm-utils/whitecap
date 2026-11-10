@@ -7,6 +7,7 @@ const SCENES := {
 	"menu": "res://ui/main_menu.tscn",
 	"match": "res://view/match.tscn",
 	"settings": "res://ui/settings_screen.tscn",
+	"zoo": "res://view/zoo.tscn",
 }
 
 var args: Dictionary = {}
