@@ -60,7 +60,9 @@ func build(id: String, look := "") -> Cutout:
 		sprite.texture = load("%s/%s.svg" % [folder, p.name])
 		sprite.centered = false
 		sprite.scale = Vector2.ONE / TEX_SCALE
-		sprite.offset = -pivot * TEX_SCALE
+		# each texture is cropped to its part's box (x, y, w, h) in animal space; see tools/art/animals.py
+		var box: Array = p.get("box", [0, 0, rig.size, rig.size])
+		sprite.offset = (Vector2(box[0], box[1]) - pivot) * TEX_SCALE
 		joint.add_child(sprite)
 		(_body if parent_name == "" else joints[parent_name]).add_child(joint)
 		joints[p.name] = joint

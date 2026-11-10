@@ -112,6 +112,11 @@ jobs:
           echo "### Web build size" >> "$GITHUB_STEP_SUMMARY"
           ls -la build/web | awk '{print "    " $5 "  " $9}' >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Budgets (styleguide section 10)
+        run: |
+          echo "### Budgets" >> "$GITHUB_STEP_SUMMARY"
+          python3 -I tools/check_budgets.py build/web | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Web smoke test (frames must keep coming)
         run: |
           # a venv: `python -I` ignores user site-packages, so a --user install would be invisible

@@ -3,6 +3,8 @@
 Change a number, run the script, get the animal. Part names are stable (game code binds to them):
 body, head, eye_l, eye_r, mouth, claw_l, claw_r, limb_fl, limb_fr, limb_bl, limb_br, tail, accessory.
 Every part is drawn in the same 200 x 200 animal space, so a part's pivot is simply a point in that space.
+Each part's SVG is then cropped to its own bounds (viewBox) and the rig records where that box sits ("box"),
+so an eye costs an eye's worth of texture, not a whole canvas (budget: one animal <= 1024 x 1024).
 Colours come from data/palette.json; a look (skin) is the same parts with another palette.
 
 Output:  assets/animals/<id>/<part>.svg   and   data/rigs/<id>.json
@@ -11,6 +13,7 @@ Usage:   python -I tools/art/animals.py
 import json
 import math
 import os
+import re
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 PALETTE = json.load(open(os.path.join(ROOT, "data", "palette.json"), encoding="utf-8"))
@@ -19,9 +22,61 @@ ORIGIN = (100, 172)  # the animal's feet: where it stands on the ground
 STROKE = 7  # thick outline (styleguide: animals pop from the island)
 
 
-def svg(body: str) -> str:
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{SIZE}" height="{SIZE}" viewBox="0 0 {SIZE} {SIZE}">'
+def svg(body: str, box: tuple) -> str:
+    x, y, w, h = box
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="{x} {y} {w} {h}">'
             f'<g stroke-linejoin="round" stroke-linecap="round">{body}</g></svg>\n')
+
+
+def _attr(el: str, name: str, default: float = 0.0) -> float:
+    m = re.search(rf'\b{name}="(-?[\d.]+)"', el)
+    return float(m.group(1)) if m else default
+
+
+def _path_points(d: str) -> list:
+    """Every point a path visits plus its control points (a curve stays inside them); arcs as their radius box."""
+    pts, x, y, sx, sy = [], 0.0, 0.0, 0.0, 0.0
+    for cmd, args in re.findall(r"([MLQAZmlqaz])([^MLQAZmlqaz]*)", d):
+        n = [float(v) for v in re.findall(r"-?[\d.]+", args)]
+        if cmd in "Zz":
+            x, y = sx, sy
+            continue
+        step = {"M": 2, "L": 2, "Q": 4, "A": 7}[cmd.upper()]
+        rel = cmd.islower()
+        for i in range(0, len(n), step):
+            a = n[i:i + step]
+            if cmd.upper() == "A":
+                ex, ey = (x + a[5], y + a[6]) if rel else (a[5], a[6])
+                r = max(a[0], a[1])
+                pts += [(x - r, y - r), (x + r, y + r), (ex - r, ey - r), (ex + r, ey + r)]
+                x, y = ex, ey
+                continue
+            coords = [(a[j] + (x if rel else 0), a[j + 1] + (y if rel else 0)) for j in range(0, step, 2)]
+            pts += coords
+            x, y = coords[-1]
+            if cmd.upper() == "M" and i == 0:
+                sx, sy = x, y
+    return pts
+
+
+def bounds(body: str) -> tuple:
+    """Integer box (x, y, w, h) around everything in a part, strokes included, plus a 2-unit margin."""
+    lo_x = lo_y = 1e9
+    hi_x = hi_y = -1e9
+    for el in re.findall(r"<(?:ellipse|circle|path)[^>]*>", body):
+        half = _attr(el, "stroke-width") / 2 if "stroke=" in el else 0.0
+        if el.startswith("<path"):
+            pts = _path_points(re.search(r'\bd="([^"]+)"', el).group(1))
+        else:
+            cx, cy = _attr(el, "cx"), _attr(el, "cy")
+            rx = _attr(el, "r") if el.startswith("<circle") else _attr(el, "rx")
+            ry = _attr(el, "r") if el.startswith("<circle") else _attr(el, "ry")
+            pts = [(cx - rx, cy - ry), (cx + rx, cy + ry)]
+        for px, py in pts:
+            lo_x, lo_y = min(lo_x, px - half), min(lo_y, py - half)
+            hi_x, hi_y = max(hi_x, px + half), max(hi_y, py + half)
+    x0, y0 = math.floor(lo_x) - 2, math.floor(lo_y) - 2
+    return x0, y0, math.ceil(hi_x) + 2 - x0, math.ceil(hi_y) + 2 - y0
 
 
 def eye(x, y, r, look=(2, 1)):
@@ -103,10 +158,11 @@ def build(animal: str, colours: dict, folder: str) -> list:
     os.makedirs(folder, exist_ok=True)
     rig = []
     for name, (body, pivot, z) in parts.items():
+        box = bounds(body)
         with open(os.path.join(folder, f"{name}.svg"), "w", encoding="utf-8", newline="\n") as fh:
-            fh.write(svg(body))
+            fh.write(svg(body, box))
         parent = "" if name == "body" else PARENTS.get(animal, {}).get(name, "body")
-        rig.append({"name": name, "pivot": list(pivot), "parent": parent, "z": z})
+        rig.append({"name": name, "pivot": list(pivot), "parent": parent, "z": z, "box": list(box)})
     return rig
 
 
