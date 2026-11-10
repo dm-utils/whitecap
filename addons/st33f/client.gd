@@ -164,8 +164,10 @@ func submit_score(run_token: String, result: Dictionary, animal: String, bots: S
 
 ## A board ("day", "week", "day:<date>", "week:<iso week>"): {board, players, entries: [{rank, player, score,
 ## pending}], me}. Signed in, "me" holds the player's own place even outside the top 50.
-func get_board(board: String) -> Dictionary:
-	return await call_api(HTTPClient.METHOD_GET, "/v1/games/%s/boards/%s" % [game, board], null, token != "", "leaderboards")
+## friends_only (signed in): just the player and the players they added.
+func get_board(board: String, friends_only := false) -> Dictionary:
+	var q := "?filter=friends" if friends_only else ""
+	return await call_api(HTTPClient.METHOD_GET, "/v1/games/%s/boards/%s%s" % [game, board, q], null, token != "" or friends_only, "leaderboards")
 
 
 ## Publish the player's public profile (signed in): {name: {a, n, num}, animal, badges: ["crab:2"], collection}.
@@ -177,3 +179,17 @@ func put_public_profile(profile: Dictionary) -> Dictionary:
 ## Someone's public profile by their public id (from a board row): {player, name, animal, badges, collection}.
 func get_player(player_id: String) -> Dictionary:
 	return await call_api(HTTPClient.METHOD_GET, "/v1/games/%s/players/%s" % [game, player_id], null, false, "leaderboards")
+
+
+## The player's friend code and friends (signed in): {code, friends: [{player, name}], max}.
+func get_friends() -> Dictionary:
+	return await call_api(HTTPClient.METHOD_GET, "/v1/games/%s/friends" % game, null, true, "leaderboards")
+
+
+## Add a friend by code (case, spaces and dashes don't matter): {player, name}. One way, like following.
+func add_friend(code: String) -> Dictionary:
+	return await call_api(HTTPClient.METHOD_POST, "/v1/games/%s/friends" % game, {"code": code}, true, "leaderboards")
+
+
+func remove_friend(player_id: String) -> Dictionary:
+	return await call_api(HTTPClient.METHOD_DELETE, "/v1/games/%s/friends/%s" % [game, player_id], null, true, "leaderboards")

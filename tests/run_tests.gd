@@ -584,6 +584,20 @@ func test_names_mastery_profiles() -> void:
 	screen.fill_profile(body, {})
 	check(body.get_child_count() == 1, "no public profile says so")
 	for c in body.get_children():
+		body.remove_child(c)
+		c.free()
+	screen.fill_friends(body, {}, "")
+	check(body.get_child_count() == 2 and (body.get_child(1) as Label).text == tr("FRIENDS_SIGN_IN"), "friends: signed out says how to sign in")
+	for c in body.get_children():
+		body.remove_child(c)
+		c.free()
+	screen.fill_friends(body, {"code": "ABCD2345", "friends": [{"player": "0123456789abcdef", "name": name}, {"player": "fedcba9876543210", "name": null}]}, "")
+	var list: VBoxContainer = body.get_child(body.get_child_count() - 1)
+	var code_row: HBoxContainer = body.get_child(1)
+	check((code_row.get_child(1) as Label).text == "ABCD-2345", "own code shown in two halves (easy to read out)")
+	check(list.get_child_count() == 2, "two friends listed")
+	check(((list.get_child(1) as HBoxContainer).get_child(0) as Label).text.begins_with(tr("BOARD_PLAYER").format({"id": "fedcba"})), "a friend without a name shows the short id")
+	for c in body.get_children():
 		c.free()
 	body.free()
 	screen.free()

@@ -158,3 +158,20 @@ PROFILE_COLLECTION,{count} animals collected,{count} dieren verzameld
 PROFILE_LOADING,Loading profile…,Profiel laden…
 PROFILE_UNAVAILABLE,This player has no public profile yet.,Deze speler heeft nog geen openbaar profiel.
 COMMON_CLOSE,Close,Sluiten
+BOARD_FRIENDS_ONLY,Friends only,Alleen vrienden
+FRIENDS_TITLE,Friends,Vrienden
+FRIENDS_LOADING,Loading friends…,Vrienden laden…
+FRIENDS_SIGN_IN,Sign in (Settings) to add friends.,Log in (Instellingen) om vrienden toe te voegen.
+FRIENDS_YOUR_CODE,Your code:,Jouw code:
+FRIENDS_COPY,Copy,Kopiëren
+FRIENDS_COPIED,Copied,Gekopieerd
+FRIENDS_CODE_HINT,Friend's code,Code van een vriend
+FRIENDS_ADD,Add,Toevoegen
+FRIENDS_ADDED,{name} added.,{name} toegevoegd.
+FRIENDS_NONE,No friends yet. Share your code!,Nog geen vrienden. Deel je code!
+FRIENDS_REMOVE,Remove,Verwijderen
+FRIENDS_BAD_CODE,A code has 8 characters.,Een code heeft 8 tekens.
+FRIENDS_UNKNOWN_CODE,Nobody has this code.,Niemand heeft deze code.
+FRIENDS_OWN_CODE,That is your own code.,Dat is je eigen code.
+FRIENDS_TOO_MANY,You have the maximum of 100 friends.,Je hebt het maximum van 100 vrienden.
+FRIENDS_SLOW_DOWN,Not so fast — try again in a minute.,Niet zo snel — probeer het over een minuut opnieuw.
