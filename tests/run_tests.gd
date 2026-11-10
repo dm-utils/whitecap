@@ -30,6 +30,7 @@ func _ready() -> void:
 	test_cutouts_build()
 	test_island_view()
 	test_fx_draw()
+	test_sfx()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -365,6 +366,22 @@ func test_fx_draw() -> void:
 	for i in 60:
 		fx.update(1.0 / 30.0)
 	check(fx.is_idle(), "splashes are gone after two seconds")
+
+
+## Every sound the game asks for is defined in data/sfx.json; in CI (after sfx.py --ffmpeg) every sound exists.
+func test_sfx() -> void:
+	var spec: Dictionary = Content.load_json("res://data/sfx.json")
+	var sounds: Dictionary = spec.sounds
+	var wanted := ["tap", "hit", "ko", "snack", "boom", "tide", "win", "splash", "dash", "ink", "dive"]
+	wanted.append_array(preload("res://view/match_view.gd").ATTACK_SOUNDS.values())
+	var missing := wanted.filter(func(n): return not sounds.has(n))
+	check(missing.is_empty(), "every sound the game plays is in sfx.json (missing: %s)" % ", ".join(missing))
+	check(float(spec.peak_dbfs) <= -3.0, "effects are normalised to a peak <= -3 dBFS")
+	check(AudioServer.get_bus_index("Sfx") != -1 and AudioServer.get_bus_effect_count(0) > 0, "Sfx bus and a limiter on the master")
+	check(Sfx.attenuation_db(0.0, 1920.0) == 0.0 and Sfx.attenuation_db(1920.0, 1920.0) < -10.0 and Sfx.attenuation_db(4000.0, 1920.0) <= -60.0, "sounds fade with distance")
+	if OS.has_environment("CI"):
+		var absent := sounds.keys().filter(func(n): return not Sfx.has_sound(n))
+		check(absent.is_empty(), "every sound was built and imported (missing: %s)" % ", ".join(absent))
 
 
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).

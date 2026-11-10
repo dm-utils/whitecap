@@ -57,6 +57,11 @@ jobs:
           ln -sfn ~/godot/templates ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           godot --version
 
+      - name: Sound effects (synthesised, Ogg Vorbis, loudness checked with ebur128)
+        run: |
+          command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg)
+          python3 -I tools/audio/sfx.py --ffmpeg ffmpeg | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Import project
         run: timeout 600 godot --headless --path . --import
 

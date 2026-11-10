@@ -242,24 +242,31 @@ func _handle_events() -> void:
 		match str(ev.type):
 			"attack", "special":
 				_cutouts[int(ev.id)].trigger("attack")
+				_sound(_attack_sound(int(ev.id), str(ev.type), str(ev.get("kind", ""))), _pos_px(m.sim.ents[int(ev.id)]))
 			"hit":
 				_cutouts[int(ev.id)].trigger("hit")
+				_sound("hit", Vector2(ev.x, ev.y) * PX)
 				_fx.append({"kind": "spark", "pos": Vector2(ev.x, ev.y) * PX, "t": 0.0})
 			"ko":
 				_cutouts[int(ev.id)].trigger("ko")
 				_fx.append({"kind": "splash", "pos": Vector2(ev.x, ev.y) * PX, "t": 0.0})
 				fx.splash(Vector2(ev.x, ev.y) * PX, 1.6)
+				_sound("ko", Vector2(ev.x, ev.y) * PX)
 				if int(ev.id) == m.human:
 					_say(tr("HUD_WASHED_AWAY"), 1.5)
 			"snack":
 				_fx.append({"kind": "heal", "pos": Vector2(ev.x, ev.y) * PX, "t": 0.0})
+				if int(ev.id) == m.human:
+					Sfx.play("snack")
 			"dive":
 				_fx.append({"kind": "boom", "pos": Vector2(ev.x, ev.y) * PX, "t": 0.0})
 				var at := Vector2(ev.x, ev.y)
 				var wet := m.sim.depth_at(int(at.x), int(at.y)) >= 1
 				fx.splash(at * PX, 2.0, Color.WHITE if wet else Color("C9A26B"))
+				_sound("boom", at * PX)
 			"tide_warning":
 				_say(tr("HUD_TIDE_WARNING"), 2.0)
+				Sfx.play("tide")
 			"tide_rise":
 				_say(tr("HUD_TIDE_RISES"), 1.5)
 			"sudden_death":
@@ -270,6 +277,7 @@ func _handle_events() -> void:
 						_cutouts[e.id].trigger("win")
 				if m.sim.ents[m.human].place == 1:
 					_say(tr("HUD_LAST_DRY"), 1.5)
+					Sfx.play("win")
 
 
 func _say(text: String, seconds: float) -> void:
@@ -390,6 +398,7 @@ func _update_cutouts() -> void:
 		c.swimming = e.alive and not flyer and m.sim.depth_at(e.x, e.y) >= 1
 		if c.swimming and not _in_water.get(e.id, true):
 			fx.splash(_pos_px(e) + Vector2(0, 16), 0.7)
+			_sound("splash", _pos_px(e), -6.0)
 		_in_water[e.id] = c.swimming
 		if c.swimming and c.moving:
 			_wake[e.id] = float(_wake.get(e.id, 0.0)) - get_process_delta_time()
@@ -514,3 +523,20 @@ func _special_value(kind: String, key: String, fallback: int) -> int:
 		if str(sp.get("kind", "")) == kind:
 			return int(sp.get(key, fallback))
 	return fallback
+
+
+## Sounds in the world are heard from the camera: quieter far away, silent off screen.
+func _sound(sound: String, pos: Vector2, extra_db := 0.0) -> void:
+	var db := Sfx.attenuation_db(pos.distance_to(cam.position), 1920.0 / cam.zoom.x) + extra_db
+	if db > -60.0:
+		Sfx.play(sound, db)
+
+
+const ATTACK_SOUNDS := {"snip": "snip", "fan": "plop", "long": "peck"}
+
+
+func _attack_sound(id: int, type: String, kind: String) -> String:
+	if type == "special":
+		return {"dash": "dash", "ink": "ink", "dive": "dive"}.get(kind, "hit")
+	var animal: Dictionary = m.sim.animals[id]
+	return ATTACK_SOUNDS.get(str(animal.get("attack", {}).get("kind", "")), "hit")

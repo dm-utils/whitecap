@@ -21,3 +21,7 @@ build/
 Thumbs.db
 .vscode/
 __pycache__/
+
+# sound effects are build output: tools/audio/sfx.py --ffmpeg (CI runs it before the import)
+assets/audio/sfx/*.ogg
+assets/audio/sfx/*.ogg.import

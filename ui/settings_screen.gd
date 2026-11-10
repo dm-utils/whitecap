@@ -75,6 +75,22 @@ func _ready() -> void:
 		get_tree().reload_current_scene())
 	lang_row.add_child(lang)
 
+	# sound effects volume (a test sound plays when you let go)
+	var sound_row := HBoxContainer.new()
+	sound_row.add_theme_constant_override("separation", 30)
+	_box.add_child(sound_row)
+	sound_row.add_child(_heading(tr("SETTINGS_SOUND")))
+	var sound := HSlider.new()
+	sound.min_value = 0
+	sound.max_value = 100
+	sound.step = 5
+	sound.value = Sfx.volume()
+	sound.custom_minimum_size = Vector2(420, 48)
+	sound.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	sound.value_changed.connect(func(v: float) -> void: Sfx.set_volume(int(v)))
+	sound.drag_ended.connect(func(_changed: bool) -> void: Sfx.play("snack"))
+	sound_row.add_child(sound)
+
 	# account
 	_box.add_child(_heading(tr("SETTINGS_ACCOUNT")))
 	_account = VBoxContainer.new()

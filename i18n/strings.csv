@@ -97,3 +97,4 @@ REPORT_SENT,Thanks! We read every report.,Bedankt! We lezen elke melding.
 REPORT_SENT_NO_ATTACHMENTS,Thanks! Your report was sent, but the attachments could not be added.,"Bedankt! Je melding is verstuurd, maar de bijlagen konden niet mee."
 REPORT_EMPTY,Write a few words first.,Schrijf eerst een paar woorden.
 SETTINGS_LANGUAGE,Language,Taal
+SETTINGS_SOUND,Sound effects,Geluidseffecten

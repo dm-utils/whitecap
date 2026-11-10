@@ -18,6 +18,7 @@ boot_splash/bg_color=Color(0.498, 0.847, 0.941, 1)
 Boot="*res://boot/boot.gd"
 St33f="*res://addons/st33f/st33f.gd"
 Platform="*res://platform/platform.gd"
+Sfx="*res://audio/sfx.gd"
 
 [display]
 
