@@ -2,17 +2,17 @@ extends Node
 ## The one door between the game and everything that may live on a server later:
 ## profile/cloud save, achievements, results/leaderboards, remote config, crash reports.
 ## Game code only calls these functions. The backend behind them is swappable:
-## LocalBackend now, RemoteBackend (St33f Engine) from phase 2/4.
+## RemoteBackend: local-first, synced to the St33f Engine when signed in (St33f autoload, loaded before us).
 
 signal profile_changed(profile: Dictionary)
 
-const LocalBackend := preload("res://platform/local_backend.gd")
+const RemoteBackend := preload("res://platform/remote_backend.gd")
 
 var backend: RefCounted
 
 
 func _ready() -> void:
-	backend = LocalBackend.new()
+	backend = RemoteBackend.new(St33f)
 
 
 func is_signed_in() -> bool:

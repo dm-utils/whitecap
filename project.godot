@@ -15,6 +15,7 @@ boot_splash/bg_color=Color(0.498, 0.847, 0.941, 1)
 
 [autoload]
 
+St33f="*res://addons/st33f/st33f.gd"
 Platform="*res://platform/platform.gd"
 Boot="*res://boot/boot.gd"
 
@@ -41,6 +42,10 @@ locale/fallback="en"
 
 common/max_physics_steps_per_frame=3
 common/physics_ticks_per_second=30
+
+[st33f]
+
+game="getij"
 
 [rendering]
 

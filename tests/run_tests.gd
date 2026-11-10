@@ -17,6 +17,8 @@ func _ready() -> void:
 	test_every_text_key_exists()
 	test_profile_roundtrip()
 	test_debug_args()
+	test_profile_merge()
+	await test_remote_backend()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -89,6 +91,67 @@ func test_debug_args() -> void:
 	check(a.get("scene") == "match" and a.get("seed") == "42", "desktop debug args parse")
 	var q: Dictionary = BootScript.parse_query("?scene=match&seed=7")
 	check(q.get("scene") == "match" and q.get("seed") == "7", "web query parses")
+
+
+func test_profile_merge() -> void:
+	var a := {"pearls_total": 120, "unlocked_animals": ["crab", "octopus"], "selected_animal": "octopus",
+		"stats": {"matches": 10, "wins": 2}, "achievements": {"first_win": 1}, "updated_at": "2026-11-10T10:00:00Z",
+		"settings": {"music": 0.5}, "version": 4}
+	var b := {"pearls_total": 90, "unlocked_animals": ["gull", "crab"], "selected_animal": "gull",
+		"stats": {"matches": 12, "wins": 1, "knockouts": 7}, "achievements": {"first_win": 2, "survivor": 1},
+		"updated_at": "2026-11-10T11:00:00Z", "settings": {"music": 0.9}, "version": 2}
+	var m: Dictionary = ProfileMerge.merge(a, b)
+	check(int(m.pearls_total) == 120, "merge: counters take the max")
+	check(m.unlocked_animals == ["crab", "gull", "octopus"], "merge: unlocks are the sorted union")
+	check(m.stats == {"knockouts": 7, "matches": 12, "wins": 2}, "merge: stats max per key")
+	check(m.achievements == {"first_win": 2, "survivor": 1}, "merge: achievements max tier")
+	check(m.selected_animal == "gull" and float(m.settings.music) == 0.9, "merge: choices from the newer profile")
+	check(int(m.version) == 4, "merge: write counter max")
+	var m2: Dictionary = ProfileMerge.merge(b, a)
+	check(m2.unlocked_animals == m.unlocked_animals and m2.stats == m.stats and int(m2.pearls_total) == 120,
+		"merge: order of arguments does not change counters and unlocks")
+	check(ProfileMerge.merge(a, {}) == a, "merge: empty server keeps local")
+
+
+func test_remote_backend() -> void:
+	var server := {"profile": {"pearls_total": 50, "unlocked_animals": ["crab", "puffer"], "updated_at": "2026-01-01T00:00:00Z"}, "version": 3}
+	var puts := []
+	var handler := func(method, path, _h, body):
+		if path == "/auth/start":
+			return [200, {"ok": true, "challenge": "c1"}]
+		if path == "/auth/verify":
+			return [200, {"ok": true, "token": "cs1_" + "a".repeat(43), "userId": "u1"}]
+		if path.ends_with("/profile") and method == HTTPClient.METHOD_GET:
+			return [200, {"ok": true, "profile": server.profile, "version": server.version}]
+		if path.ends_with("/profile") and method == HTTPClient.METHOD_PUT:
+			puts.append(body)
+			server.version += 1
+			server.profile = body.profile
+			return [200, {"ok": true, "version": server.version}]
+		return [404, {"error": "not_found"}]
+	var node = preload("res://addons/st33f/st33f.gd").new()
+	node.configure("getij", St33fScriptedTransport.new(handler), St33fTokenStore.new(), "http://test.local", Callable(), "user://st33f/test_queue.json")
+	add_child(node)
+	var b = preload("res://platform/remote_backend.gd").new(node)
+	b.profile_path = "user://test_remote_profile.json"
+	if FileAccess.file_exists(b.profile_path):
+		DirAccess.remove_absolute(b.profile_path)
+	var local: Dictionary = b.load_profile()
+	local["pearls_total"] = 80
+	b.save_profile(local)
+	check(not node.profile_sync.dirty, "signed out: saves stay local")
+
+	await node.sign_in_start("p@example.com")
+	await node.sign_in_verify("123456")
+	await get_tree().process_frame
+	var merged: Dictionary = b.load_profile()
+	check(int(merged.pearls_total) == 80 and (merged.unlocked_animals as Array).has("puffer") and (merged.unlocked_animals as Array).has("gull"),
+		"after sign-in the cloud copy is merged into the local profile")
+	check(node.profile_sync.dirty and node.profile_sync.version == 3, "merged profile is queued for upload on top of server version 3")
+	var r: Dictionary = await node.profile_sync.push_now()
+	check(r.ok and puts.size() == 1 and int(server.profile.pearls_total) == 80, "upload sends the merged profile")
+	DirAccess.remove_absolute(b.profile_path)
+	node.queue_free()
 
 
 # --- helpers ---
