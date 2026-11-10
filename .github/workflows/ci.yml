@@ -78,10 +78,12 @@ jobs:
 
       - name: Web smoke test (frames must keep coming)
         run: |
-          python3 -m pip install -q playwright
-          python3 -m playwright install --with-deps chromium >/dev/null
+          # a venv: `python -I` ignores user site-packages, so a --user install would be invisible
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -q playwright
+          "$RUNNER_TEMP/venv/bin/python" -m playwright install --with-deps chromium >/dev/null
           mkdir -p build/shots
-          python3 -I tools/web_smoke.py build/web build/shots
+          "$RUNNER_TEMP/venv/bin/python" -I tools/web_smoke.py build/web build/shots
 
       - name: Android debug build
         run: |
