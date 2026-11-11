@@ -231,8 +231,9 @@ func delete_feedback() -> Dictionary:
 # --- online matches (pvp relay) ---
 
 ## WebSocket address of the online lobby for this game (the relay groups players, then sends a room).
-func pvp_lobby_url(animal: String) -> String:
-	return "%s/v1/games/%s/pvp?animal=%s" % [_ws(base_for("pvp")), game, animal.uri_encode()]
+func pvp_lobby_url(animal: String, mode := "") -> String:
+	var url := "%s/v1/games/%s/pvp?animal=%s" % [_ws(base_for("pvp")), game, animal.uri_encode()]
+	return url + ("&mode=" + mode.uri_encode() if mode != "" else "")
 
 
 ## WebSocket address of a match room (seat and key come from the lobby's "match" message).

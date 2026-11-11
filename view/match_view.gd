@@ -126,7 +126,7 @@ func _ready() -> void:
 	_build_hud()
 	perf = PerfMeter.new() # F3 or perf=1 shows it; the debug fps log uses it too
 	add_child(perf)
-	_say(tr("DROP_TITLE") if mode == "" else tr("BALL_YOUR_TEAM"), _intro)
+	_say(tr("DROP_TITLE") if mode == "" else tr("BALL_YOUR_TEAM" if m.sim.ents[m.human].team == 0 else "BALL_YOUR_TEAM_ORANGE"), _intro)
 
 
 # --- loop ---
@@ -681,7 +681,7 @@ static func choose_controls(profile: Dictionary, args: Dictionary, touchscreen: 
 ## The lobby's "match" message: same seed and seats on every screen; bots fill the empty seats.
 func _start_online(info: Dictionary) -> void:
 	var animals: Array = info.get("animals", [])
-	m = Match.create_online(int(info.seed), animals, 6, "normal")
+	m = Match.create_online(int(info.seed), animals, 6, "normal", mode)
 	m.human = int(info.slot)
 	rb = Rollback.new(m, m.human, int(info.get("delay", 2)))
 	net = OnlineClient.new()
