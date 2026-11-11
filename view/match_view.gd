@@ -13,6 +13,10 @@ const ANIMAL_PX := 96.0 # on-screen size of an animal (styleguide: recognisable 
 
 var m: Match
 var _plan: Dictionary = {} # from the menu (daily challenge), empty for a normal match
+var rb: Rollback # online: the rollback driving the match
+var net: OnlineClient # online: the room connection
+var _online_started := false
+var _next_hash := Rollback.HASH_EVERY - 1
 var island: IslandView # ground and water, one shader (z -1)
 var board: Node2D # snacks, ink, dive markers, ripples, shadows and rings (z 0)
 var actors: Node2D # cutout animals, sorted by y (z 1)
@@ -52,13 +56,17 @@ func _ready() -> void:
 	var bots := str(Boot.args.get("bots", "easy"))
 	_plan = Boot.next_match
 	Boot.next_match = {}
-	if not _plan.is_empty(): # the daily challenge: seed, animal and bots are the same for everyone
+	if _plan.has("online"):
+		pass # set up below, after the offline defaults
+	elif not _plan.is_empty(): # the daily challenge: seed, animal and bots are the same for everyone
 		seed_value = int(_plan.seed)
 		animal = str(_plan.animal)
 		bots = str(_plan.bots)
 	if not Match.SLICE_ANIMALS.has(animal):
 		animal = "octopus"
 	m = Match.create(seed_value, animal, 6, bots)
+	if _plan.has("online"):
+		_start_online(_plan.online)
 	if Boot.args.has("tide") and OS.is_debug_build():
 		m.sim.rules = m.sim.rules.duplicate(true)
 		m.sim.rules.tide.phase_ticks = maxi(60, int(Boot.args.tide) * 30)
@@ -123,8 +131,11 @@ func _process(delta: float) -> void:
 		_acc += delta
 		var steps := 0
 		while _acc >= DT and steps < MAX_STEPS_PER_FRAME:
-			_remember_positions()
-			m.step(_command())
+			if rb != null and not _online_step():
+				break # online: waiting for the start, or for someone's input (more than 1 s behind)
+			if rb == null:
+				_remember_positions()
+				m.step(_command())
 			_handle_events()
 			_acc -= DT
 			steps += 1
@@ -309,6 +320,8 @@ func _say(text: String, seconds: float) -> void:
 
 
 func _finish() -> void:
+	if net != null:
+		net.close()
 	Boot.last_result = m.human_result()
 	Boot.last_result["bots"] = m.bot_level
 	Boot.last_result["replay"] = Replay.encode(m.replay)
@@ -586,3 +599,54 @@ static func choose_controls(profile: Dictionary, args: Dictionary, touchscreen: 
 	if ["keys", "mouse", "touch"].has(chosen):
 		return chosen
 	return "touch" if touchscreen else "keys"
+
+
+# --- online (phase 12c): relay + rollback ---
+
+## The lobby's "match" message: same seed and seats on every screen; bots fill the empty seats.
+func _start_online(info: Dictionary) -> void:
+	var animals: Array = info.get("animals", [])
+	m = Match.create_online(int(info.seed), animals, 6, "normal")
+	m.human = int(info.slot)
+	rb = Rollback.new(m, m.human, int(info.get("delay", 2)))
+	net = OnlineClient.new()
+	add_child(net)
+	net.message.connect(_on_net)
+	net.closed.connect(func(_code: int) -> void:
+		if _ending < 0.0:
+			_say(tr("ONLINE_LOST"), 3.0)
+			_ending = 3.0)
+	net.open(St33f.client.pvp_room_url(str(info.room), int(info.slot), str(info.key)))
+	_say(tr("ONLINE_WAITING_START"), 30.0)
+
+
+func _on_net(msg: Dictionary) -> void:
+	match OnlineClient.apply(rb, msg):
+		"start":
+			_online_started = true
+			_say(tr("DROP_TITLE"), 1.2)
+		"desync":
+			# two screens disagree: nothing here can be trusted any more (should never happen; reported)
+			_say(tr("ONLINE_DESYNC"), 3.0)
+			if _ending < 0.0:
+				_ending = 3.0
+			if St33f.crash != null:
+				St33f.crash.capture("desync", "online desync at tick %d" % int(msg.get("t", -1)), [])
+
+
+## One online tick: own input out, the rollback plays (replaying corrected ticks), settled hashes out.
+func _online_step() -> bool:
+	if not _online_started or not rb.can_advance():
+		return false
+	_remember_positions()
+	rb.local_input(Match.cmd_to(_command()))
+	for out in OnlineClient.batch(rb.outbox):
+		net.send(out)
+	rb.outbox.clear()
+	rb.advance()
+	while rb.settled_hash(_next_hash) != -1:
+		net.send({"type": "hash", "t": _next_hash, "h": rb.settled_hash(_next_hash)})
+		if OS.is_debug_build():
+			print("online settled tick %d hash %d seat %d of %d rollbacks %d" % [_next_hash, rb.settled_hash(_next_hash), m.human, m.sim.ents.size(), rb.rollbacks])
+		_next_hash += Rollback.HASH_EVERY
+	return true

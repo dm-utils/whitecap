@@ -228,3 +228,12 @@ ATTACK_DESC_LONG,one fast peck from far away,één snelle pik van ver weg
 SPECIAL_DESC_DASH,a sideways dash that pushes others away,een zijwaartse sprint die anderen wegduwt
 SPECIAL_DESC_INK,an ink cloud that slows everyone inside,een inktwolk die iedereen erin vertraagt
 SPECIAL_DESC_DIVE,a dive onto a spot: a big splash after a moment,een duik op een plek: na een tel een grote plons
+MENU_ONLINE,Play online,Online spelen
+ONLINE_TITLE,Online,Online
+ONLINE_CONNECTING,Connecting…,Verbinden…
+ONLINE_WAITING,{players} found · starting in {seconds} s (bots fill the rest),{players} gevonden · start over {seconds} s (bots vullen aan)
+ONLINE_CANCEL,Cancel,Annuleren
+ONLINE_OFFLINE,Can't reach the online service right now.,De online dienst is nu niet bereikbaar.
+ONLINE_WAITING_START,Waiting for the others…,Wachten op de anderen…
+ONLINE_LOST,Connection lost.,Verbinding verbroken.
+ONLINE_DESYNC,The screens got out of step. Match stopped.,De schermen liepen uit de pas. Potje gestopt.

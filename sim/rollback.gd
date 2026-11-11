@@ -9,6 +9,7 @@ extends RefCounted
 
 const MAX_ROLLBACK := 30 # ticks (1 s): further behind than this we wait instead of guessing
 const NONE := [-1, -1, -1, -1]
+const HASH_EVERY := 60 # ticks: a settled hash every 2 s goes to the relay (desync check)
 
 var m: Match
 var me := 0
@@ -24,12 +25,16 @@ var _last := {} # slot -> latest confirmed cmd (the prediction)
 var _snaps := {} # tick -> snapshot before playing it
 var _redo_from := -1 # earliest tick played with a wrong prediction
 var _next_unknown := {} # slot -> first tick whose input hasn't arrived (all before it are known)
+var _seats: Array = [] # every player seat at the start
+var _leave := {} # slot -> tick from which a bot plays that seat
+var _hash := {} # tick -> state hash after playing it (final once the tick is settled)
 
 
 func _init(match_: Match, my_slot: int, input_delay := 2) -> void:
 	m = match_
 	me = my_slot
 	delay = input_delay
+	_seats = m.humans.duplicate()
 	# nobody can have input for the first `delay` ticks: they are known to be empty for everyone
 	for t in delay:
 		var row := {}
@@ -69,6 +74,15 @@ func _confirm(slot: int, t: int, cmd: Array) -> void:
 			_redo_from = t
 
 
+## A player left: from tick t a bot plays that seat, on every screen (the relay picks t). Replays if needed.
+func leave(slot: int, t: int) -> void:
+	if _leave.has(slot):
+		return
+	_leave[slot] = t
+	if t < tick and (_redo_from == -1 or t < _redo_from):
+		_redo_from = t
+
+
 ## May we play the next tick? Not when someone's input is more than MAX_ROLLBACK ticks behind.
 func can_advance() -> bool:
 	return tick - waiting_since() < MAX_ROLLBACK
@@ -77,8 +91,11 @@ func can_advance() -> bool:
 ## The first tick for which some player's input is still missing (inputs may arrive out of order).
 func waiting_since() -> int:
 	var lowest := tick
-	for s in m.humans:
-		lowest = mini(lowest, int(_next_unknown.get(s, 0)))
+	for s in _seats:
+		var k := int(_next_unknown.get(s, 0))
+		if _leave.has(s) and k >= int(_leave[s]):
+			continue # everything before the leave is known; after it a bot plays
+		lowest = mini(lowest, k)
 	return lowest
 
 
@@ -108,12 +125,22 @@ func _redo() -> void:
 
 func _play(t: int) -> void:
 	_snaps[t] = m.sim.snapshot()
+	# who is still a player at this tick (seats that were left are bots from their leave tick)
+	var players: Array = []
+	for s in _seats:
+		if _leave.has(s) and int(_leave[s]) <= t:
+			m.sim.ents[s].is_bot = 1
+		else:
+			players.append(s)
+	m.humans = players
 	var row: Dictionary = _inputs.get(t, {})
 	var used := {}
-	for s in m.humans:
+	for s in players:
 		used[s] = row[s] if row.has(s) else _predict(s, t)
 	_used[t] = used
 	m.step_many(used)
+	if t % HASH_EVERY == HASH_EVERY - 1: # hashing costs time: only the ticks we report
+		_hash[t] = m.sim.state_hash()
 
 
 func _predict(slot: int, t: int) -> Array:
@@ -133,6 +160,17 @@ func _forget_old() -> void:
 		if t < keep_from:
 			_snaps.erase(t)
 			_used.erase(t)
+	for t in _hash.keys():
+		if t < keep_from - 300:
+			_hash.erase(t)
+
+
+## The hash after tick t once every player's input for it is known and nothing waits to be replayed, else -1.
+## Online games send one every so often; the relay compares them (desync check).
+func settled_hash(t: int) -> int:
+	if t >= waiting_since() or t >= tick or (_redo_from != -1 and _redo_from <= t) or not _hash.has(t):
+		return -1
+	return int(_hash[t])
 
 
 ## After the last tick: replay anything still predicted once all input is in. Returns the state hash.
@@ -144,7 +182,7 @@ func settle() -> int:
 ## Every player's confirmed input per tick, for the replay check after the match.
 func confirmed_inputs(until: int) -> Dictionary:
 	var out := {}
-	for s in m.humans:
+	for s in _seats:
 		var list: Array = []
 		for t in until:
 			list.append((_inputs.get(t, {}) as Dictionary).get(s, NONE))

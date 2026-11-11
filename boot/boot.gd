@@ -11,6 +11,7 @@ const SCENES := {
 	"fx": "res://view/fx_review.tscn",
 	"leaderboard": "res://ui/leaderboard_screen.tscn",
 	"collection": "res://ui/collection_screen.tscn",
+	"online": "res://ui/online_screen.tscn",
 }
 
 var args: Dictionary = {}

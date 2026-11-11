@@ -43,6 +43,7 @@ func _ready() -> void:
 	test_perf_meter()
 	test_rewards_season_collection()
 	test_rollback()
+	test_online_protocol()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -729,7 +730,7 @@ func test_rewards_season_collection() -> void:
 
 ## Online: six screens over a laggy, jittery network end in exactly the same state as one run with all input known.
 func test_rollback() -> void:
-	for setup in [{"players": 2, "lag": [1, 3]}, {"players": 6, "lag": [2, 9]}]:
+	for setup in [{"players": 2, "lag": [1, 3]}, {"players": 6, "lag": [2, 9]}, {"players": 4, "lag": [1, 6], "leaver": 2, "leave_at_step": 150}]:
 		var n: int = setup.players
 		var seed_value := 90210
 		var animals: Array = []
@@ -743,14 +744,28 @@ func test_rollback() -> void:
 		var in_flight: Array = [] # [arrive_at_step, to, from, tick, cmd]
 		var ticks := 360
 		var step := 0
+		var leave_tick := -1
 		var t0 := Time.get_ticks_msec()
-		while clients.any(func(c): return c.tick < ticks) and step < ticks * 4:
+		var players: Array = range(n).filter(func(i): return not setup.has("leaver") or i != setup.leaver)
+		while players.any(func(i): return clients[i].tick < ticks) and step < ticks * 4:
 			step += 1
 			for msg in in_flight.filter(func(x): return x[0] <= step):
-				clients[msg[1]].remote_input(msg[2], msg[3], msg[4])
+				if msg[2] == -1:
+					clients[msg[1]].leave(msg[4], msg[3])
+				else:
+					clients[msg[1]].remote_input(msg[2], msg[3], msg[4])
 			in_flight = in_flight.filter(func(x): return x[0] > step)
+			# a player who quits: the relay tells the rest from which tick a bot plays that seat
+			if setup.has("leaver") and step == int(setup.leave_at_step):
+				var gone: Rollback = clients[setup.leaver]
+				leave_tick = gone.tick + gone.delay # = the tick after the last input it sent
+				for j in n:
+					if j != setup.leaver:
+						in_flight.append([step + net.randi_range(setup.lag[0], setup.lag[1]), j, -1, leave_tick, setup.leaver])
 			for i in n:
 				var c: Rollback = clients[i]
+				if setup.has("leaver") and i == setup.leaver and step >= int(setup.leave_at_step):
+					continue
 				if c.tick >= ticks or not c.can_advance():
 					continue
 				# each player reacts to what they see on their own screen (predictions included)
@@ -762,11 +777,16 @@ func test_rollback() -> void:
 				c.outbox.clear()
 				c.advance()
 		for msg in in_flight: # the network delivers the rest
-			clients[msg[1]].remote_input(msg[2], msg[3], msg[4])
-		var hashes: Array = clients.map(func(c): return c.settle())
-		var inputs: Dictionary = clients[0].confirmed_inputs(ticks)
+			if msg[2] == -1:
+				clients[msg[1]].leave(msg[4], msg[3])
+			else:
+				clients[msg[1]].remote_input(msg[2], msg[3], msg[4])
+		var hashes: Array = players.map(func(i): return clients[i].settle())
+		var inputs: Dictionary = clients[players[0]].confirmed_inputs(ticks)
 		var ref := Match.create_online(seed_value, animals, 6, "normal")
 		for t in ticks:
+			if t == leave_tick:
+				ref.to_bot(setup.leaver)
 			var cmds := {}
 			for s in ref.humans:
 				cmds[s] = inputs[s][t]
@@ -774,14 +794,36 @@ func test_rollback() -> void:
 		var same := hashes.all(func(h): return h == hashes[0])
 		var total_rb := 0
 		var total_resim := 0
-		for c in clients:
+		for i in players:
+			var c: Rollback = clients[i]
 			total_rb += c.rollbacks
 			total_resim += c.resimulated
-		var what := "%d players, lag %s ticks: every screen ends identical to the reference (%d rollbacks, %d ticks replayed, %d ms for %d screens x %d ticks)" % [
+		var what := ("one quits at tick %d; " % leave_tick if leave_tick >= 0 else "") + "%d players, lag %s ticks: every screen ends identical to the reference (%d rollbacks, %d ticks replayed, %d ms for %d screens x %d ticks)" % [
 			n, str(setup.lag), total_rb, total_resim, Time.get_ticks_msec() - t0, n, ticks]
 		print("rollback: " + what)
 		check(same and hashes[0] == ref.sim.state_hash(), what)
 		check(total_rb > 0, "%d players: predictions really were corrected (the test exercises rollback)" % n)
+
+
+## The online protocol: own input in batches of up to 8 consecutive ticks; relay messages land in the rollback.
+func test_online_protocol() -> void:
+	var outbox: Array = []
+	for t in range(2, 13):
+		outbox.append([t, [t, -1, -1, -1]])
+	var msgs := OnlineClient.batch(outbox)
+	check(msgs.size() == 2 and msgs[0].t == 2 and msgs[0].cs.size() == 8 and msgs[1].t == 10 and msgs[1].cs.size() == 3, "batches of up to 8 ticks")
+	var m := Match.create_online(5, ["crab", "gull"], 6, "normal")
+	var rb := Rollback.new(m, 0)
+	check(OnlineClient.apply(rb, {"type": "start", "players": 2, "left": {}}) == "start", "start")
+	# JSON gives floats: they must become ints, or a correct prediction would look wrong
+	check(OnlineClient.apply(rb, {"type": "in", "s": 1.0, "t": 2.0, "cs": [[1024.0, -1.0, -1.0, -1.0], [1024.0, -1.0, -1.0, -1.0]]}) == "in", "input")
+	check(rb.waiting_since() == 0 or rb.confirmed_inputs(4)[1][3] == [1024, -1, -1, -1], "input stored as ints for the right seat and ticks")
+	check(OnlineClient.apply(rb, {"type": "leave", "s": 1, "t": 4}) == "leave", "leave")
+	for i in 20:
+		rb.local_input([-1, -1, -1, -1])
+		rb.advance()
+	check(not m.humans.has(1) and m.sim.ents[1].is_bot == 1 and rb.tick == 20, "after the leave tick a bot plays the seat and nobody waits for it")
+	check(OnlineClient.apply(rb, {"type": "desync", "t": 60}) == "desync" and OnlineClient.apply(rb, {"type": "?"}) == "", "desync and unknown")
 
 
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).

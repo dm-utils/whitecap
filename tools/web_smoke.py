@@ -11,6 +11,7 @@ Usage: python -I tools/web_smoke.py build/web [screenshot_dir]
 """
 import functools
 import hashlib
+import re
 import http.server
 import os
 import socketserver
@@ -154,6 +155,38 @@ def main() -> int:
         touch("touchEnd", [])
         if canvas_hash(page) == before:
             failures.append("touch: nothing changed while two thumbs were down")
+
+        # online: two windows join the dev relay together and must agree on every settled tick (desync check)
+        online_logs = {0: [], 1: []}
+        online_pages = []
+        for i in range(2):
+            octx = browser.new_context(viewport={"width": 960, "height": 540})
+            opg = octx.new_page()
+            opg.on("console", lambda m, i=i: online_logs[i].append(m.text))
+            opg.goto(f"http://127.0.0.1:{port}/index.html?scene=menu&lang=nl")
+            opg.wait_for_selector("#loader.done", state="attached", timeout=60000)
+            online_pages.append(opg)
+        online_pages[0].wait_for_timeout(1500)
+        for opg in online_pages:
+            opg.mouse.click(135, 117)  # "Online spelen", the first menu button
+        online_pages[0].wait_for_timeout(12000)  # lobby wait (8 s) + drop-in
+        online_pages[0].keyboard.down("Space")
+        online_pages[0].wait_for_timeout(15000)
+        if shots:
+            online_pages[1].screenshot(path=f"{shots}/web-online.png")
+        rx = re.compile(r"online settled tick (\d+) hash (-?\d+) seat (\d+)")
+        got = [{int(m.group(1)): (int(m.group(2)), int(m.group(3))) for line in online_logs[i] for m in [rx.search(line)] if m} for i in range(2)]
+        common = sorted(set(got[0]) & set(got[1]))
+        seats = {v[1] for g in got for v in g.values()}
+        print(f"online: settled ticks {len(got[0])} / {len(got[1])}, common {len(common)}, seats {sorted(seats)}")
+        if len(seats) < 2:
+            failures.append("online: the two windows did not end up in the same match")
+        elif not common:
+            failures.append("online: no settled ticks in common (did the match start?)")
+        elif any(got[0][t][0] != got[1][t][0] for t in common):
+            failures.append("online: the two windows disagree (desync)")
+        for opg in online_pages:
+            opg.context.close()
 
         # Dutch: texts are ~30 % longer, so the layouts must still fit (checked by eye in the contact sheet)
         for scene, extra, name in [("menu", "&lang=nl", "web-menu-nl"), ("settings", "&lang=nl", "web-settings-nl"),

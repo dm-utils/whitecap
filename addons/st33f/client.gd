@@ -10,12 +10,14 @@ const URLS := {
 		"accounts": "https://st33f-accounts-dev.st33fd3v.workers.dev",
 		"feedback": "https://st33f-feedback-dev.st33fd3v.workers.dev",
 		"leaderboards": "https://st33f-leaderboards-dev.st33fd3v.workers.dev",
+		"pvp": "https://st33f-pvp-dev.st33fd3v.workers.dev",
 	},
 	"acc": {},
 	"prod": {
 		"accounts": "https://api.steefbeest.nl",
 		"feedback": "https://feedback-api.steefbeest.nl",
 		"leaderboards": "https://scores.steefbeest.nl",
+		"pvp": "https://pvp.steefbeest.nl",
 	},
 }
 
@@ -224,3 +226,19 @@ func export_feedback() -> Dictionary:
 
 func delete_feedback() -> Dictionary:
 	return await call_api(HTTPClient.METHOD_DELETE, "/v1/feedback/mine", null, true, "feedback")
+
+
+# --- online matches (pvp relay) ---
+
+## WebSocket address of the online lobby for this game (the relay groups players, then sends a room).
+func pvp_lobby_url(animal: String) -> String:
+	return "%s/v1/games/%s/pvp?animal=%s" % [_ws(base_for("pvp")), game, animal.uri_encode()]
+
+
+## WebSocket address of a match room (seat and key come from the lobby's "match" message).
+func pvp_room_url(room: String, slot: int, key: String) -> String:
+	return "%s/v1/games/%s/pvp/room/%s?slot=%d&key=%s" % [_ws(base_for("pvp")), game, room, slot, key]
+
+
+static func _ws(http_base: String) -> String:
+	return http_base.replace("https://", "wss://").replace("http://", "ws://")
