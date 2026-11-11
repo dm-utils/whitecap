@@ -3,7 +3,7 @@ extends Node
 ## Exit code 1 on any failure, so CI fails.
 ##   godot --headless --path . res://tests/run_tests.tscn
 
-const LOCAL_SEED_2026_11_10 := 1923612937 # FNV-1a, computed independently in Python
+const LOCAL_SEED_2026_11_10 := 326878711 # FNV-1a over "whitecap-daily-2026-11-10", computed independently in Python
 const LocalBackend := preload("res://platform/local_backend.gd")
 const BootScript := preload("res://boot/boot.gd")
 const ContentScript := preload("res://sim/content.gd")
@@ -156,7 +156,7 @@ func test_remote_backend() -> void:
 			return [200, {"ok": true, "version": server.version}]
 		return [404, {"error": "not_found"}]
 	var node = preload("res://addons/st33f/st33f.gd").new()
-	node.configure("getij", St33fScriptedTransport.new(handler), St33fTokenStore.new(), "http://test.local", Callable(), "user://st33f/test_queue.json")
+	node.configure("whitecap", St33fScriptedTransport.new(handler), St33fTokenStore.new(), "http://test.local", Callable(), "user://st33f/test_queue.json")
 	add_child(node)
 	var b = preload("res://platform/remote_backend.gd").new(node)
 	b.profile_path = "user://test_remote_profile.json"
@@ -620,7 +620,7 @@ func test_names_mastery_profiles() -> void:
 ## "Download my data": signed out it holds what is on this device; the file is written where the player finds it.
 func test_my_data() -> void:
 	var data: Dictionary = await MyData.gather()
-	check(data.device is Dictionary and data.platform == null and data.game == "getij", "signed out: the device profile, no platform part")
+	check(data.device is Dictionary and data.platform == null and data.game == "whitecap", "signed out: the device profile, no platform part")
 	var text := JSON.stringify(data, "  ")
 	check(not text.contains("cs1_"), "no session token in the export")
 	var path := MyData.save(text)

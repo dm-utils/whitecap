@@ -230,7 +230,7 @@ def main() -> int:
         if canvas_hash(page) == before:
             failures.append("touch: nothing changed while two thumbs were down")
 
-        # online: two windows on the dev relay must agree on every settled tick; Getij, then Strandbal
+        # online: two windows on the dev relay must agree on every settled tick; the normal match, then Strandbal
         for online_mode in ["", "ball"]:
             failures.extend(online_check(browser, port, shots, online_mode))
 

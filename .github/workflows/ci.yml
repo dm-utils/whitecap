@@ -71,7 +71,7 @@ jobs:
       - name: Replay check runs headless on Linux (sample written by the tests)
         run: |
           out=$(timeout 300 godot --headless --path . res://tools/verify/verify_scores.tscn -- \
-            --in="$HOME/.local/share/godot/app_userdata/Getij/verify_sample.json" --out="$RUNNER_TEMP/verdicts.json")
+            --in="$HOME/.local/share/godot/app_userdata/Whitecap/verify_sample.json" --out="$RUNNER_TEMP/verdicts.json")
           echo "$out"
           echo "$out" | grep -q "4 scores, 1 verified, 3 rejected"
 
@@ -82,7 +82,7 @@ jobs:
         run: |
           if [ -z "$DEPLOY_KEY" ]; then echo "::notice::ST33F_DEPLOY_KEY_DEV not set yet (OWNER_TASKS 5); skipping"; exit 0; fi
           curl -sf -X PUT -H "Content-Type: application/json" -H "X-Deploy-Key: $DEPLOY_KEY" \
-            --data @data/settings_defs.json https://st33f-accounts-dev.st33fd3v.workers.dev/v1/games/getij/settings/defs
+            --data @data/settings_defs.json https://st33f-accounts-dev.st33fd3v.workers.dev/v1/games/whitecap/settings/defs
 
       - name: Push the score rules to the dev leaderboards (develop only, needs the deploy key)
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
@@ -92,7 +92,7 @@ jobs:
           if [ -z "$DEPLOY_KEY" ]; then echo "::notice::ST33F_DEPLOY_KEY_DEV not set yet; skipping"; exit 0; fi
           python3 -c "import json; r = json.load(open('data/rules.json')); print(json.dumps({'score': r['score'], 'limits': r['limits']}))" > "$RUNNER_TEMP/rules.json"
           curl -sf -X PUT -H "Content-Type: application/json" -H "X-Deploy-Key: $DEPLOY_KEY" \
-            --data @"$RUNNER_TEMP/rules.json" https://st33f-leaderboards-dev.st33fd3v.workers.dev/v1/games/getij/rules
+            --data @"$RUNNER_TEMP/rules.json" https://st33f-leaderboards-dev.st33fd3v.workers.dev/v1/games/whitecap/rules
 
       - name: Tool tests (translation sync)
         run: python3 -I tools/test_i18n_sync.py
@@ -120,7 +120,7 @@ jobs:
           timeout 600 godot --headless --path . --export-release "Web" build/web/index.html
           # debug web build only for the smoke test (debug flags: fast tide, god mode, fps log)
           mkdir -p build/web-debug && timeout 600 godot --headless --path . --export-debug "Web" build/web-debug/index.html
-          timeout 600 godot --headless --path . --export-release "Windows" build/windows/Getij.exe
+          timeout 600 godot --headless --path . --export-release "Windows" build/windows/Whitecap.exe
 
       - name: Pre-compress web build (brotli)
         run: |
@@ -145,7 +145,7 @@ jobs:
 
       - name: Contact sheet of the screenshots
         if: always()
-        run: mkdir -p build/shots && python3 -I tools/contact_sheet.py build/shots "Getij — ${GITHUB_REF_NAME}"
+        run: mkdir -p build/shots && python3 -I tools/contact_sheet.py build/shots "Whitecap — ${GITHUB_REF_NAME}"
 
       - name: Android debug build
         run: |
@@ -161,7 +161,7 @@ jobs:
           export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$RUNNER_TEMP/debug.keystore"
           export GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey
           export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
-          timeout 600 godot --headless --path . --export-debug "Android" build/android/getij-debug.apk
+          timeout 600 godot --headless --path . --export-debug "Android" build/android/whitecap-debug.apk
           ls -la build/android
 
       - name: Scan build snapshot for secrets

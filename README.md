@@ -1,4 +1,4 @@
-# Getij
+# Whitecap
 
 Beach animals brawl on a shrinking island while the tide comes in. Godot 4.7.2 (pinned), GDScript.
 
@@ -40,3 +40,5 @@ python -I tools/web_smoke.py build/web           # after exporting the "Web" pre
 - No player-facing string inline: `tr("KEY")`, and the key goes into `i18n/strings.csv` in the same change.
 - No asset without a row in `assets/credits.csv` (source, author, licence, date).
 - `develop` gets the work; `main` changes only through a pull request the owner merges. Never force-push.
+
+© ST33F. All rights reserved: the source is visible, it is not open source.

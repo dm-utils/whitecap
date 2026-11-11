@@ -19,7 +19,7 @@ env:
   GODOT_VERSION: "4.7.2"
   # from https://github.com/godotengine/godot/releases/download/4.7.2-stable/SHA512-SUMS.txt
   GODOT_SHA512_EDITOR: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
-  BASE: https://st33f-leaderboards-dev.st33fd3v.workers.dev/v1/games/getij
+  BASE: https://st33f-leaderboards-dev.st33fd3v.workers.dev/v1/games/whitecap
 
 jobs:
   verify:

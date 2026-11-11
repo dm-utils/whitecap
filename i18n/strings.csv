@@ -1,5 +1,5 @@
 keys,en,nl
-TITLE,GETIJ,GETIJ
+TITLE,WHITECAP,WHITECAP
 BOOT_WORKING_TITLE,working title,werktitel
 BOOT_TAP,Tap to start,Tik om te beginnen
 BOOT_LOADING,Loading…,Laden…
@@ -188,7 +188,7 @@ PRIVACY_GATHERING,Gathering your data…,Je gegevens verzamelen…
 PRIVACY_SAVED_AT,Saved: {path},Opgeslagen: {path}
 PRIVACY_SAVED_WEB,Your browser is downloading the file.,Je browser downloadt het bestand.
 PRIVACY_PARTIAL,Not every service answered; try again later for a complete file.,Niet elke dienst antwoordde; probeer het later opnieuw voor een volledig bestand.
-PRIVACY_P1,"Getij keeps your progress on this device. Without an account nothing about you leaves the device, except anonymous crash reports (no name, no address, no IP address).","Getij bewaart je voortgang op dit apparaat. Zonder account verlaat niets over jou het apparaat, behalve anonieme crashmeldingen (geen naam, geen adres, geen IP-adres)."
+PRIVACY_P1,"Whitecap keeps your progress on this device. Without an account nothing about you leaves the device, except anonymous crash reports (no name, no address, no IP address).","Whitecap bewaart je voortgang op dit apparaat. Zonder account verlaat niets over jou het apparaat, behalve anonieme crashmeldingen (geen naam, geen adres, geen IP-adres)."
 PRIVACY_P2,"With an account we keep: your e-mail address (to send you sign-in codes), your cloud save and your sign-in sessions.","Met een account bewaren we: je e-mailadres (om je inlogcodes te sturen), je cloud-save en je inlogsessies."
 PRIVACY_P3,"On the leaderboards you appear under a pseudonym, never your e-mail: your scores, your generated name, favourite animal, mastery and collection, your friend code and the friends you added.","Op de ranglijsten sta je onder een pseudoniem, nooit met je e-mail: je scores, je gegenereerde naam, favoriete dier, meesterschap en collectie, je vriendcode en de vrienden die je toevoegde."
 PRIVACY_P4,"How long: reports you send are kept up to 2 years (screenshots and saves 180 days), crash reports 90 days, scores 400 days, sign-in codes 15 minutes.","Hoe lang: meldingen die je stuurt bewaren we tot 2 jaar (schermafbeeldingen en saves 180 dagen), crashmeldingen 90 dagen, scores 400 dagen, inlogcodes 15 minuten."
@@ -252,4 +252,4 @@ BALL_GOAL_AGAINST,Goal for the other team,Doelpunt voor de tegenpartij
 BALL_YOUR_TEAM_ORANGE,You play for orange!,Jij speelt bij oranje!
 ONLINE_TITLE_BALL,Beach ball online,Strandbal online
 ONLINE_SWITCH_BALL,Play beach ball instead,Liever strandbal
-ONLINE_SWITCH_NORMAL,Play Getij instead,Liever Getij
+ONLINE_SWITCH_NORMAL,Play the classic match instead,Liever het gewone potje
