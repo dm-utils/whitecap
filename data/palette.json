@@ -4,6 +4,8 @@
   "eye": "#FFFFFF",
   "pupil": "#2B3A4A",
   "world": {
+    "team_blue": "3F8CFF",
+    "team_orange": "FF8A3D",
     "sand_high": "#F5DCA9",
     "sand": "#F2D49B",
     "sand_shade": "#E5C384",

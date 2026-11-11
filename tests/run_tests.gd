@@ -327,6 +327,12 @@ func test_result_bookkeeping() -> void:
 	var p: Dictionary = Platform.load_profile()
 	check((p.unlocked_animals as Array).has("puffer") and int(p.pearls_total) == 325, "crossing 250 adds the pufferfish to the unlocked animals")
 	check(int(p.stats.matches) == 5 and int(p.stats.wins) == 4 and int(p.mastery.gull.matches) == 2, "stats and mastery counted")
+	# Strandbal: a draw (counts as 2nd place) with 2 goals and 1 KO
+	o = RS.apply_result({"mode": "ball", "place": 2, "outcome": "draw", "kos": 1, "goals": 2, "animal": "crab"})
+	p = Platform.load_profile()
+	check(int(o.earned) == 45 + 10 + 20, "Strandbal: a draw with 2 goals and 1 KO earns 45 + 10 + 2 x 10 pearls (got %d)" % int(o.earned))
+	check(int(p.stats.ball_matches) == 1 and int(p.stats.goals) == 2 and int(p.mastery.crab.goals) == 2 and int(p.stats.wins) == 4,
+		"Strandbal: goals counted in stats and crab mastery; a draw is no win")
 	DirAccess.remove_absolute(backend.profile_path)
 	backend.profile_path = saved_path
 
@@ -387,7 +393,7 @@ func test_fx_draw() -> void:
 func test_sfx() -> void:
 	var spec: Dictionary = Content.load_json("res://data/sfx.json")
 	var sounds: Dictionary = spec.sounds
-	var wanted := ["tap", "hit", "ko", "snack", "boom", "tide", "win", "splash", "dash", "ink", "dive"]
+	var wanted := ["tap", "hit", "ko", "snack", "boom", "tide", "win", "splash", "dash", "ink", "dive", "kick", "whistle", "cheer"]
 	wanted.append_array(preload("res://view/match_view.gd").ATTACK_SOUNDS.values())
 	var missing := wanted.filter(func(n): return not sounds.has(n))
 	check(missing.is_empty(), "every sound the game plays is in sfx.json (missing: %s)" % ", ".join(missing))

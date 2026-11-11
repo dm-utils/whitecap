@@ -48,6 +48,7 @@ var _dive_delay := {} # Dive instance id -> its delay when first seen (marker pr
 var _blind := 0.0 # ink blindness on screen, eases in and out
 var mode := "" # "" normal, "ball" Strandbal
 var _prev_ball := Vector2.ZERO
+var _waiting_kickoff := false
 
 
 func _ready() -> void:
@@ -90,7 +91,10 @@ func _ready() -> void:
 	island = IslandView.new().setup(m.sim, 1000.0 * PX)
 	island.z_index = -1
 	add_child(island)
-	_ink = Color(str(Content.load_json("res://data/palette.json").world.ink))
+	var world: Dictionary = Content.load_json("res://data/palette.json").world
+	_ink = Color(str(world.ink))
+	_team = [Color(str(world.team_blue)), Color(str(world.team_orange))]
+	_waiting_kickoff = mode == "ball"
 	board = Node2D.new()
 	board.draw.connect(_draw_board)
 	add_child(board)
@@ -142,6 +146,8 @@ func _process(delta: float) -> void:
 				_remember_positions()
 				m.step(_command())
 			_handle_events()
+			if mode == "ball":
+				_kickoff_whistle()
 			_acc -= DT
 			steps += 1
 		if steps == MAX_STEPS_PER_FRAME:
@@ -318,17 +324,20 @@ func _handle_events() -> void:
 			"sudden_death":
 				_say(tr("HUD_SUDDEN_DEATH"), 1.5)
 			"kick":
-				_sound("hit", Vector2(ev.x, ev.y) * PX, -4.0)
+				_sound("kick", Vector2(ev.x, ev.y) * PX, -2.0 + 4.0 * minf(1.0, float(ev.power) / 860.0))
 				_fx.append({"kind": "spark", "pos": Vector2(ev.x, ev.y) * PX, "t": 0.0})
 			"bounce":
 				_sound("splash", Vector2(ev.x, ev.y) * PX, -10.0)
 			"goal":
 				var at := Vector2(ev.x, ev.y) * PX
-				fx.splash(at, 2.4)
+				fx.splash(at, 2.4, _team[int(ev.team)]) # confetti in the scoring team's colour
+				fx.splash(at, 1.6)
 				_fx.append({"kind": "boom", "pos": at, "t": 0.0})
 				var ours: bool = int(ev.team) == m.sim.ents[m.human].team
-				_say(tr("BALL_GOAL"), 1.8)
-				Sfx.play("win" if ours else "ko")
+				var scorer := int(ev.by)
+				_say(tr("BALL_YOU_SCORED") if scorer == m.human else (tr("BALL_GOAL") if ours else tr("BALL_GOAL_AGAINST")), 1.8)
+				Sfx.play("cheer" if ours else "ko")
+				_waiting_kickoff = true
 				_prev_ball = Vector2(m.sim.bx, m.sim.by)
 				for e in m.sim.ents:
 					_prev[e.id] = Vector2(e.x, e.y) # the kickoff teleports everyone: no sliding across the field
@@ -345,6 +354,7 @@ func _handle_events() -> void:
 						if e.alive and e.place == 1 and mine != 2:
 							_cutouts[e.id].trigger("win")
 					_say(tr(["", "BALL_WON", "BALL_DRAW", "BALL_LOST"][clampi(mine, 1, 3)]), 1.5)
+					Sfx.play("whistle")
 					Sfx.play("win" if mine == 1 else "ko")
 					continue
 				for e in m.sim.ents:
@@ -353,6 +363,13 @@ func _handle_events() -> void:
 				if m.sim.ents[m.human].place == 1:
 					_say(tr("HUD_LAST_DRY"), 1.5)
 					Sfx.play("win")
+
+
+## Strandbal: the whistle when the kickoff pause ends and play starts.
+func _kickoff_whistle() -> void:
+	if _waiting_kickoff and m.sim.kickoff == 0 and not m.finished():
+		_waiting_kickoff = false
+		Sfx.play("whistle")
 
 
 func _say(text: String, seconds: float) -> void:
@@ -415,7 +432,7 @@ func _draw_board() -> void:
 			if mode == "ball": # team colours; you get a white edge as well
 				if e.id == m.human:
 					board.draw_arc(Vector2.ZERO, 32.0, 0, TAU, 40, Color.WHITE, 15.0)
-				board.draw_arc(Vector2.ZERO, 32.0, 0, TAU, 40, TEAM[e.team], 9.0)
+				board.draw_arc(Vector2.ZERO, 32.0, 0, TAU, 40, _team[e.team], 10.0)
 			else:
 				board.draw_arc(Vector2.ZERO, 32.0, 0, TAU, 40, ME if e.id == m.human else FOE, 9.0)
 			board.draw_set_transform(Vector2.ZERO)
@@ -464,7 +481,7 @@ func _draw_bars(e: MatchSim.Ent) -> void:
 	var top := p + Vector2(-w / 2, -86 - lift)
 	overlay.draw_rect(Rect2(top - Vector2(2, 2), Vector2(w + 4, 11)), INK)
 	var f := clampf(float(e.hp) / float(e.max_hp), 0.0, 1.0)
-	var col: Color = FOE if mode == "" else TEAM[e.team]
+	var col: Color = FOE if mode == "" else _team[e.team]
 	if mine:
 		col = Color("5BD66B") if f > 0.5 else (Color("FFD23F") if f > 0.25 else FOE)
 	overlay.draw_rect(Rect2(top, Vector2(w * f, 7)), col)
@@ -712,8 +729,8 @@ func _online_step() -> bool:
 
 # --- Strandbal (phase 14): field, goals, ball ---
 
-const TEAM := [Color("3F8CFF"), Color("FF8A3D")] # blue, orange (team rings, nets)
-const LINE := Color(1, 1, 1, 0.55)
+const LINE := Color(1, 1, 1, 0.7)
+var _team: Array = [Color("3F8CFF"), Color("FF8A3D")] # blue, orange from data/palette.json (rings, nets, confetti)
 
 
 func _ball_px() -> Vector2:
@@ -724,10 +741,11 @@ func _ball_px() -> Vector2:
 func _draw_field() -> void:
 	var f := m.sim.field
 	var r := Rect2(Vector2(f[0], f[1]) * PX, Vector2(f[2] - f[0], f[3] - f[1]) * PX)
-	board.draw_rect(r, LINE, false, 6.0)
+	board.draw_rect(r, LINE, false, 8.0)
 	var cx := r.position.x + r.size.x / 2.0
-	board.draw_line(Vector2(cx, r.position.y), Vector2(cx, r.end.y), LINE, 6.0)
-	board.draw_arc(r.get_center(), 3.0 * 1000.0 * PX, 0, TAU, 48, LINE, 6.0)
+	board.draw_line(Vector2(cx, r.position.y), Vector2(cx, r.end.y), LINE, 8.0)
+	board.draw_arc(r.get_center(), 3.0 * 1000.0 * PX, 0, TAU, 48, LINE, 8.0)
+	board.draw_circle(r.get_center(), 10.0, LINE)
 	var y0 := float(m.sim.mouth[0]) * PX
 	var y1 := float(m.sim.mouth[1]) * PX
 	var depth := 2.2 * 1000.0 * PX
@@ -735,11 +753,11 @@ func _draw_field() -> void:
 		var x := r.position.x if team == 0 else r.end.x
 		var back := x - depth if team == 0 else x + depth
 		var net := Rect2(Vector2(minf(x, back), y0), Vector2(depth, y1 - y0))
-		board.draw_rect(net, Color(TEAM[team], 0.25))
+		board.draw_rect(net, Color(_team[team], 0.25))
 		for i in range(1, 8):
 			var yy := y0 + (y1 - y0) * i / 8.0
 			board.draw_line(Vector2(x, yy), Vector2(back, yy), Color(1, 1, 1, 0.35), 2.0)
-		board.draw_rect(net, TEAM[team], false, 5.0)
+		board.draw_rect(net, _team[team], false, 6.0)
 		for yy in [y0, y1]:
 			board.draw_circle(Vector2(x, yy), 13.0, INK)
 			board.draw_circle(Vector2(x, yy), 9.0, Color.WHITE)
@@ -752,7 +770,7 @@ func _draw_ball() -> void:
 	var spin := (p.x + p.y) / maxf(1.0, rad)
 	overlay.draw_circle(p, rad + 4.0, INK)
 	overlay.draw_circle(p, rad, Color.WHITE)
-	var cols := [TEAM[0], Color("FFD23F"), TEAM[1]]
+	var cols := [_team[0], Color("FFD23F"), _team[1]]
 	for i in 3:
 		var a0 := spin + i * TAU / 3.0
 		var pts := PackedVector2Array([p])

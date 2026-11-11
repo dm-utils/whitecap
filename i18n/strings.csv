@@ -247,3 +247,5 @@ BALL_WON,Your team wins!,Jouw team wint!
 BALL_DRAW,A draw,Gelijkspel
 BALL_LOST,The other team wins,Het andere team wint
 RESULT_BALL_GOALS,Your goals: {count},Jouw doelpunten: {count}
+BALL_YOU_SCORED,You scored!,Jij scoort!
+BALL_GOAL_AGAINST,Goal for the other team,Doelpunt voor de tegenpartij
