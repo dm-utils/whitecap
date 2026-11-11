@@ -44,6 +44,7 @@ func _ready() -> void:
 	test_rewards_season_collection()
 	test_rollback()
 	test_online_protocol()
+	test_ball_mode()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -288,12 +289,13 @@ func test_determinism() -> void:
 func test_golden_traces() -> void:
 	var path := "res://tests/golden/traces.json"
 	var update := OS.get_cmdline_user_args().has("--update-golden")
-	var cases := [{"seed": 1, "ticks": 1800}, {"seed": 2026, "ticks": 3600}, {"seed": 31337, "ticks": 6000}]
+	var cases := [{"seed": 1, "ticks": 1800}, {"seed": 2026, "ticks": 3600}, {"seed": 31337, "ticks": 6000},
+		{"seed": 4242, "ticks": 3000, "mode": "ball"}]
 	var recorded: Variant = Content.load_json(path) if FileAccess.file_exists(path) else null
 	var out: Array = []
 	for i in cases.size():
 		var cs: Dictionary = cases[i]
-		var m := Match.create(int(cs.seed), "", 6, "easy")
+		var m := Match.create(int(cs.seed), "", 6, "easy", str(cs.get("mode", "")))
 		for t in int(cs.ticks):
 			m.step()
 		var row := {"seed": cs.seed, "ticks": cs.ticks, "hash": m.sim.state_hash(), "alive": m.sim.alive_count(), "level": m.sim.level}
@@ -730,7 +732,9 @@ func test_rewards_season_collection() -> void:
 
 ## Online: six screens over a laggy, jittery network end in exactly the same state as one run with all input known.
 func test_rollback() -> void:
-	for setup in [{"players": 2, "lag": [1, 3]}, {"players": 6, "lag": [2, 9]}, {"players": 4, "lag": [1, 6], "leaver": 2, "leave_at_step": 150}]:
+	for setup in [{"players": 2, "lag": [1, 3]}, {"players": 6, "lag": [2, 9]}, {"players": 4, "lag": [1, 6], "leaver": 2, "leave_at_step": 150},
+			{"players": 4, "lag": [1, 6], "mode": "ball"}]:
+		var mode := str(setup.get("mode", ""))
 		var n: int = setup.players
 		var seed_value := 90210
 		var animals: Array = []
@@ -738,7 +742,7 @@ func test_rollback() -> void:
 			animals.append(Match.SLICE_ANIMALS[i % 3])
 		var clients: Array = []
 		for i in n:
-			clients.append(Rollback.new(Match.create_online(seed_value, animals, 6, "normal"), i))
+			clients.append(Rollback.new(Match.create_online(seed_value, animals, 6, "normal", mode), i))
 		var net := RandomNumberGenerator.new()
 		net.seed = 7
 		var in_flight: Array = [] # [arrive_at_step, to, from, tick, cmd]
@@ -783,7 +787,7 @@ func test_rollback() -> void:
 				clients[msg[1]].remote_input(msg[2], msg[3], msg[4])
 		var hashes: Array = players.map(func(i): return clients[i].settle())
 		var inputs: Dictionary = clients[players[0]].confirmed_inputs(ticks)
-		var ref := Match.create_online(seed_value, animals, 6, "normal")
+		var ref := Match.create_online(seed_value, animals, 6, "normal", mode)
 		for t in ticks:
 			if t == leave_tick:
 				ref.to_bot(setup.leaver)
@@ -798,7 +802,7 @@ func test_rollback() -> void:
 			var c: Rollback = clients[i]
 			total_rb += c.rollbacks
 			total_resim += c.resimulated
-		var what := ("one quits at tick %d; " % leave_tick if leave_tick >= 0 else "") + "%d players, lag %s ticks: every screen ends identical to the reference (%d rollbacks, %d ticks replayed, %d ms for %d screens x %d ticks)" % [
+		var what := ("Strandbal: " if mode != "" else "") + ("one quits at tick %d; " % leave_tick if leave_tick >= 0 else "") + "%d players, lag %s ticks: every screen ends identical to the reference (%d rollbacks, %d ticks replayed, %d ms for %d screens x %d ticks)" % [
 			n, str(setup.lag), total_rb, total_resim, Time.get_ticks_msec() - t0, n, ticks]
 		print("rollback: " + what)
 		check(same and hashes[0] == ref.sim.state_hash(), what)
@@ -928,3 +932,123 @@ func files_under(dir: String, exts: Array) -> Array:
 			if file.ends_with(e):
 				out.append(dir.path_join(file))
 	return out
+
+
+## Strandbal (phase 14): rules, goals, own goals, bounces, teams, washing away and coming back, golden goal.
+func test_ball_mode() -> void:
+	var m := Match.create(3, "crab", 6, "normal", "ball")
+	var s := m.sim
+	check(s.mode == "ball" and str(s.rules.island) == "strand" and int(s.rules.tide.max_level) == 6
+		and int(s.rules.attack.charges) == int(MatchSim.rules_for("").attack.charges), "mode rules merge over the normal rules")
+	check(str(MatchSim.rules_for("").island) == "cove", "the normal rules are untouched by the merge")
+	var teams: Array = s.ents.map(func(e): return e.team)
+	check(teams == [0, 1, 0, 1, 0, 1], "teams alternate by seat: %s" % str(teams))
+	var c := s.field_center()
+	check(s.bx == c.x and s.by == c.y and s.kickoff > 0, "the ball starts in the middle with a kickoff pause")
+	var blue_left := s.ents.all(func(e): return (e.x < c.x) == (e.team == 0))
+	check(blue_left, "blue starts on the left half, orange on the right")
+
+	var idle: Array = []
+	for i in 6:
+		idle.append({})
+	# a shot into the right goal by a blue animal: blue scores, the scorer gets the goal, kickoff resets
+	s.kickoff = 0
+	var mid := (s.mouth[0] + s.mouth[1]) / 2
+	s.bx = s.field[2] - 300
+	s.by = mid
+	s.bvx = 500
+	s.bvy = 0
+	s.btouch = 0
+	s.step(idle)
+	check(s.score_0 == 1 and s.score_1 == 0 and s.ents[0].goals == 1, "a shot into the right goal counts for blue and for the scorer")
+	check(s.bx == c.x and s.by == c.y and s.bvx == 0 and s.kickoff > 0, "after a goal the ball is back in the middle")
+	var goal_ev := s.events.filter(func(ev): return ev.type == "goal")
+	check(goal_ev.size() == 1 and int(goal_ev[0].team) == 0 and int(goal_ev[0].by) == 0, "a goal event names the team and scorer")
+	# an own goal: orange's last touch into the right goal still counts for blue, nobody gets the goal
+	s.kickoff = 0
+	s.bx = s.field[2] - 300
+	s.by = mid
+	s.bvx = 500
+	s.btouch = 1
+	s.step(idle)
+	check(s.score_0 == 2 and s.ents[1].goals == 0, "an own goal counts for the other team and credits nobody")
+	# outside the mouth the ball bounces off the end line
+	s.kickoff = 0
+	s.bx = s.field[2] - 500
+	s.by = s.mouth[0] - 2000
+	s.bvx = 600
+	s.bvy = 0
+	s.step(idle)
+	check(s.score_0 == 2 and s.bvx < 0 and s.bx < s.field[2], "outside the goal mouth the ball bounces back")
+	# friendly fire is off: a blue shot passes a blue animal and hits an orange one
+	s.kickoff = 0
+	s.bx = c.x
+	s.by = s.field[1] + 1000
+	s.bvx = 0
+	s.bvy = 0
+	var a: MatchSim.Ent = s.ents[0]
+	var mate: MatchSim.Ent = s.ents[2]
+	var foe: MatchSim.Ent = s.ents[1]
+	a.x = 10000
+	a.y = mid
+	mate.x = 11200
+	mate.y = mid
+	foe.x = 12600
+	foe.y = mid
+	var mate_hp := mate.hp
+	var foe_hp := foe.hp
+	var shoot := idle.duplicate(true)
+	shoot[0] = {"a": 0}
+	s.step(shoot)
+	for i in 12:
+		s.step(idle)
+	check(mate.hp == mate_hp, "a teammate is not hurt by your shot")
+	check(foe.hp < foe_hp, "an opponent behind them is")
+	# washed away: gone for a while, then back at their own spawn with full health
+	foe.hp = 1
+	foe.x = s.field_center().x
+	foe.y = s.field[1] + 200 # the side line is deep water at this tide? make sure with a direct hit
+	s._damage(foe, 100000, 0)
+	s.step(idle)
+	check(foe.alive == 0 and foe.respawn > 0 and not s.finished, "an animal at 0 washes away; the match goes on")
+	for i in int(s.rules.ball.respawn_ticks):
+		s.step(idle)
+	check(foe.alive == 1 and foe.hp == foe.max_hp and foe.x > c.x, "after the respawn time it is back on its own half with full health")
+	check(not m.human_out(), "in Strandbal the player is never out for good")
+	# golden goal: a draw at full time plays on, the next goal wins
+	s.score_0 = 1
+	s.score_1 = 1
+	s.kickoff = 0
+	s.tick = int(s.rules.ball.match_ticks) - 1
+	s.step(idle)
+	check(s.golden == 1 and not s.finished and s.level == int(s.rules.tide.max_level), "a draw at full time goes to golden goal at the highest tide")
+	s.kickoff = 0
+	s.bx = s.field[0] + 300
+	s.by = mid
+	s.bvx = -500
+	s.btouch = 1
+	s.step(idle)
+	check(s.finished == 1 and s.score_1 == 2 and s.ents[1].place == 1 and s.ents[0].place == 3, "the golden goal wins it")
+	var r := m.human_result()
+	check(r.mode == "ball" and r.outcome == "lost" and r.place == 4 and r.score == [1, 2], "result for the player: %s" % str(r))
+
+	# determinism, snapshot and restore in this mode
+	var x := Match.create(55, "", 6, "normal", "ball")
+	var y := Match.create(55, "", 6, "normal", "ball")
+	for i in 1500:
+		x.step()
+		y.step()
+	check(x.sim.state_hash() == y.sim.state_hash(), "Strandbal: same seed -> same state")
+	var snap := x.sim.snapshot()
+	for i in 900:
+		x.step()
+	var z := Match.create(55, "", 6, "normal", "ball")
+	z.sim.restore(snap)
+	for i in 900:
+		z.step()
+	check(x.sim.state_hash() == z.sim.state_hash() and x.sim.score_0 == z.sim.score_0, "Strandbal: snapshot + restore continues identically")
+
+	# a light balance check (the full one: tests/ball_balance.tscn, 120 matches)
+	var bal := BallBalanceRunner.run(8, "normal", 11)
+	print("ball: light balance, 8 matches: %.1f goals per match, 0-0 %.0f %%" % [bal.avg_goals, bal.nil_pct])
+	check(bal.avg_goals >= 1.0 and bal.avg_goals <= 8.0 and bal.nil_pct <= 40.0, "bots score in Strandbal (%.1f goals per match)" % bal.avg_goals)

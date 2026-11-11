@@ -237,3 +237,13 @@ ONLINE_OFFLINE,Can't reach the online service right now.,De online dienst is nu 
 ONLINE_WAITING_START,Waiting for the others…,Wachten op de anderen…
 ONLINE_LOST,Connection lost.,Verbinding verbroken.
 ONLINE_DESYNC,The screens got out of step. Match stopped.,De schermen liepen uit de pas. Potje gestopt.
+MENU_BALL,Beach ball,Strandbal
+BALL_YOUR_TEAM,You play for blue!,Jij speelt bij blauw!
+BALL_SCORE,Blue {blue} – {orange} Orange,Blauw {blue} – {orange} Oranje
+BALL_GOAL,Goal!,Doelpunt!
+BALL_GOLDEN,Golden goal: next goal wins!,"Gouden goal: wie scoort, wint!"
+BALL_GOLDEN_SHORT,Golden goal,Gouden goal
+BALL_WON,Your team wins!,Jouw team wint!
+BALL_DRAW,A draw,Gelijkspel
+BALL_LOST,The other team wins,Het andere team wint
+RESULT_BALL_GOALS,Your goals: {count},Jouw doelpunten: {count}

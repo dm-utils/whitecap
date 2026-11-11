@@ -26,13 +26,17 @@ func _ready() -> void:
 	add_child(menu)
 	menu.position = Vector2(60, 200)
 	menu.custom_minimum_size = Vector2(420, 0)
-	for key in ["MENU_ONLINE", "MENU_COLLECTION", "MENU_PATH", "MENU_LEADERBOARD", "MENU_PROFILE", "MENU_SETTINGS"]:
+	for key in ["MENU_ONLINE", "MENU_BALL", "MENU_COLLECTION", "MENU_PATH", "MENU_LEADERBOARD", "MENU_PROFILE", "MENU_SETTINGS"]:
 		var b := Button.new()
 		b.text = tr(key)
 		if key == "MENU_SETTINGS":
 			b.pressed.connect(func() -> void: get_tree().change_scene_to_file(Boot.SCENES["settings"]))
 		elif key == "MENU_ONLINE":
 			b.pressed.connect(func() -> void: get_tree().change_scene_to_file(Boot.SCENES["online"]))
+		elif key == "MENU_BALL":
+			b.pressed.connect(func() -> void:
+				Boot.next_match = {"mode": "ball"}
+				get_tree().change_scene_to_file(Boot.SCENES["match"]))
 		elif key == "MENU_COLLECTION":
 			b.pressed.connect(func() -> void: get_tree().change_scene_to_file(Boot.SCENES["collection"]))
 		elif key == "MENU_LEADERBOARD":

@@ -87,6 +87,12 @@ func trigger(what: String) -> void:
 			_win = true
 
 
+## Back in the game after washing away (Strandbal): visible and standing again.
+func revive() -> void:
+	_ko = -1.0
+	visible = true
+
+
 ## Review only (zoo scene): play the knockout again from the start.
 func free_ko_restart() -> void:
 	_ko = 0.0

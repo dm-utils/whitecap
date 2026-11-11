@@ -15,7 +15,8 @@ var humans: Array = [] # online: the player slots (the rest are bots)
 var _bot_cfg: Dictionary
 
 
-static func create(seed_value: int, human_animal: String, players := 6, level := "easy") -> Match:
+## mode "" = the normal match (last one dry wins); "ball" = Strandbal, 3 against 3 (phase 14).
+static func create(seed_value: int, human_animal: String, players := 6, level := "easy", mode := "") -> Match:
 	var m := Match.new()
 	m.bot_level = level
 	m._bot_cfg = BotBrain.level_config(level)
@@ -27,7 +28,7 @@ static func create(seed_value: int, human_animal: String, players := 6, level :=
 		m.human = 0
 	while entrants.size() < players:
 		entrants.append(SLICE_ANIMALS[pick.range_i(SLICE_ANIMALS.size())])
-	m.sim = MatchSim.new(seed_value, entrants)
+	m.sim = MatchSim.new(seed_value, entrants, mode)
 	var bots: Dictionary = Content.load_json("res://data/bots.json")
 	for e in m.sim.ents:
 		if e.id == m.human:
@@ -57,14 +58,14 @@ func step(human_cmd: Dictionary = {}) -> void:
 
 ## Online (phase 12): several players in slots 0..n-1 (their animals in order), bots fill the rest. Everyone in the
 ## match builds it the same way from the same seed, so bots act the same on every screen.
-static func create_online(seed_value: int, animals: Array, players := 6, level := "normal") -> Match:
-	var m := create(seed_value, "", players, level)
+static func create_online(seed_value: int, animals: Array, players := 6, level := "normal", mode := "") -> Match:
+	var m := create(seed_value, "", players, level, mode)
 	# rebuild with the players first: create() with "" made all bots; redo with fixed entrants
 	var pick := SimRng.new(seed_value ^ 0x5BD1E995)
 	var entrants: Array = animals.duplicate()
 	while entrants.size() < players:
 		entrants.append(SLICE_ANIMALS[pick.range_i(SLICE_ANIMALS.size())])
-	m.sim = MatchSim.new(seed_value, entrants)
+	m.sim = MatchSim.new(seed_value, entrants, mode)
 	m.humans = []
 	for i in animals.size():
 		m.humans.append(i)
@@ -116,6 +117,13 @@ func finished() -> bool:
 ## The player's result, the same for the screen and for the replay check: {place, kos, animal, seed, survived_s, players}.
 func human_result() -> Dictionary:
 	var me: MatchSim.Ent = sim.ents[human]
+	if sim.mode == "ball": # won / draw / lost count like 1st / 2nd / 4th place for pearls; no leaderboard (yet)
+		var place: int = [1, 1, 2, 4][clampi(me.place, 0, 3)]
+		return {
+			"mode": "ball", "place": place, "outcome": ["won", "won", "draw", "lost"][clampi(me.place, 0, 3)],
+			"kos": me.kos, "goals": me.goals, "team": me.team, "score": [sim.score_0, sim.score_1],
+			"animal": str(sim.animals[me.id].id), "seed": sim.seed_value, "survived_s": sim.tick / 30, "players": sim.ents.size(),
+		}
 	return {
 		"place": me.place if me.place > 0 else 1, "kos": me.kos, "animal": str(sim.animals[me.id].id), "seed": sim.seed_value,
 		"survived_s": (me.died_tick if me.died_tick >= 0 else sim.tick) / 30, "players": sim.ents.size(),
@@ -123,4 +131,4 @@ func human_result() -> Dictionary:
 
 
 func human_out() -> bool:
-	return human >= 0 and not sim.ents[human].alive
+	return human >= 0 and not sim.ents[human].alive and sim.mode == "" # Strandbal: you come back

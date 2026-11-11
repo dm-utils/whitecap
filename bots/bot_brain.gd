@@ -15,6 +15,8 @@ static func level_config(name: String) -> Dictionary:
 
 
 static func think(sim: MatchSim, e: MatchSim.Ent, cfg: Dictionary) -> Dictionary:
+	if sim.mode == "ball":
+		return BallBrain.think(sim, e, cfg)
 	var cmd := {"m": -1, "a": -1, "s": -1}
 	var rules := sim.rules
 	var near: MatchSim.Ent = null

@@ -42,11 +42,18 @@ func _ready() -> void:
 	add_child(box)
 	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
-	box.add_child(_label(tr("RESULT_PLACE").format({"place": r.place}), UiTheme.heading(200)))
-	var msg := tr("RESULT_WIN") if r.place == 1 else (tr("RESULT_CLOSE") if r.place <= 3 else tr("RESULT_LOST"))
-	box.add_child(_label(msg, UiTheme.heading(56, UiTheme.INK, 0)))
-	box.add_child(_label("%s  ·  %s" % [tr("RESULT_KOS").format({"count": r.kos}), tr("RESULT_SURVIVED").format({"seconds": r.survived_s})],
-		UiTheme.heading(40, UiTheme.INK, 0)))
+	if str(r.get("mode", "")) == "ball": # Strandbal: the score, then won / draw / lost
+		var sc: Array = r.get("score", [0, 0])
+		box.add_child(_label(tr("BALL_SCORE").format({"blue": int(sc[0]), "orange": int(sc[1])}), UiTheme.heading(150)))
+		box.add_child(_label(tr({"won": "BALL_WON", "draw": "BALL_DRAW"}.get(str(r.get("outcome", "")), "BALL_LOST")), UiTheme.heading(56, UiTheme.INK, 0)))
+		box.add_child(_label("%s  ·  %s" % [tr("RESULT_BALL_GOALS").format({"count": int(r.get("goals", 0))}), tr("RESULT_KOS").format({"count": r.kos})],
+			UiTheme.heading(40, UiTheme.INK, 0)))
+	else:
+		box.add_child(_label(tr("RESULT_PLACE").format({"place": r.place}), UiTheme.heading(200)))
+		var msg := tr("RESULT_WIN") if r.place == 1 else (tr("RESULT_CLOSE") if r.place <= 3 else tr("RESULT_LOST"))
+		box.add_child(_label(msg, UiTheme.heading(56, UiTheme.INK, 0)))
+		box.add_child(_label("%s  ·  %s" % [tr("RESULT_KOS").format({"count": r.kos}), tr("RESULT_SURVIVED").format({"seconds": r.survived_s})],
+			UiTheme.heading(40, UiTheme.INK, 0)))
 	if r.has("daily"):
 		var d := record_daily(r)
 		box.add_child(_label(tr("RESULT_DAILY_SCORE").format({"score": d.score, "best": d.best}), UiTheme.heading(44, UiTheme.GOLD, 8)))

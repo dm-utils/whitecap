@@ -3,7 +3,7 @@ extends Node2D
 ## fixed 30 Hz, and the view interpolates between ticks. Events (hits, KOs, tide) drive effects and messages.
 ## Debug entry: --scene=match --seed=N [--animal=gull] [--bots=easy|normal|hard];
 ## debug builds also take [--tide=<seconds per phase>] [--god=1] (smoke test). Any build: [--controls=touch]
-## [--safe=l,t,r,b] to see the phone layout on a PC.
+## [--safe=l,t,r,b] to see the phone layout on a PC. [--mode=ball] plays Strandbal (phase 14).
 
 const PX := 0.08 # screen pixels per milli-tile: 80 px per tile, ~24 x 13 tiles visible at 1920 x 1080
 const DT := 1.0 / 30.0
@@ -46,6 +46,8 @@ var _in_water := {} # id -> bool, to splash when an animal enters the water
 var _wake := {} # id -> seconds until the next ripple behind a swimmer
 var _dive_delay := {} # Dive instance id -> its delay when first seen (marker progress)
 var _blind := 0.0 # ink blindness on screen, eases in and out
+var mode := "" # "" normal, "ball" Strandbal
+var _prev_ball := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -56,15 +58,18 @@ func _ready() -> void:
 	var bots := str(Boot.args.get("bots", "easy"))
 	_plan = Boot.next_match
 	Boot.next_match = {}
+	mode = str(_plan.get("mode", Boot.args.get("mode", "")))
+	if mode != "ball":
+		mode = ""
 	if _plan.has("online"):
 		pass # set up below, after the offline defaults
-	elif not _plan.is_empty(): # the daily challenge: seed, animal and bots are the same for everyone
+	elif _plan.has("seed"): # the daily challenge: seed, animal and bots are the same for everyone
 		seed_value = int(_plan.seed)
 		animal = str(_plan.animal)
 		bots = str(_plan.bots)
 	if not Match.SLICE_ANIMALS.has(animal):
 		animal = "octopus"
-	m = Match.create(seed_value, animal, 6, bots)
+	m = Match.create(seed_value, animal, 6, bots if mode == "" or Boot.args.has("bots") else "normal", mode)
 	if _plan.has("online"):
 		_start_online(_plan.online)
 	if Boot.args.has("tide") and OS.is_debug_build():
@@ -117,7 +122,7 @@ func _ready() -> void:
 	_build_hud()
 	perf = PerfMeter.new() # F3 or perf=1 shows it; the debug fps log uses it too
 	add_child(perf)
-	_say(tr("DROP_TITLE"), _intro)
+	_say(tr("DROP_TITLE") if mode == "" else tr("BALL_YOUR_TEAM"), _intro)
 
 
 # --- loop ---
@@ -176,6 +181,7 @@ func _alpha() -> float:
 func _remember_positions() -> void:
 	for e in m.sim.ents:
 		_prev[e.id] = Vector2(e.x, e.y)
+	_prev_ball = Vector2(m.sim.bx, m.sim.by)
 
 
 func _pos_px(e: MatchSim.Ent) -> Vector2:
@@ -214,7 +220,13 @@ func _command() -> Dictionary:
 	_target = target.id if target != null else -1
 	var aim := _last_move
 	var dist := -1
-	if controls == "mouse":
+	var ball_d := Fx.dist(m.sim.bx - e.x, m.sim.by - e.y) if mode == "ball" else 1 << 30
+	if controls != "mouse" and ball_d < m.sim.attack_range(e) * 9 / 10:
+		target = null
+		_target = -1
+		aim = Fx.atan2_a(m.sim.by - e.y, m.sim.bx - e.x)
+		dist = ball_d
+	elif controls == "mouse":
 		var world := get_global_mouse_position() / PX
 		aim = Fx.atan2_a(int(world.y) - e.y, int(world.x) - e.x)
 		dist = Fx.dist(int(world.x) - e.x, int(world.y) - e.y)
@@ -245,7 +257,7 @@ func _auto_target(e: MatchSim.Ent) -> MatchSim.Ent:
 	var best: MatchSim.Ent = null
 	var best_d2 := reach * reach
 	for o in m.sim.ents:
-		if o.alive and o.id != e.id:
+		if o.alive and o.id != e.id and (e.team < 0 or o.team != e.team):
 			var d2 := MatchSim._d2(o.x - e.x, o.y - e.y)
 			if d2 < best_d2:
 				best = o
@@ -305,7 +317,36 @@ func _handle_events() -> void:
 				_say(tr("HUD_TIDE_RISES"), 1.5)
 			"sudden_death":
 				_say(tr("HUD_SUDDEN_DEATH"), 1.5)
+			"kick":
+				_sound("hit", Vector2(ev.x, ev.y) * PX, -4.0)
+				_fx.append({"kind": "spark", "pos": Vector2(ev.x, ev.y) * PX, "t": 0.0})
+			"bounce":
+				_sound("splash", Vector2(ev.x, ev.y) * PX, -10.0)
+			"goal":
+				var at := Vector2(ev.x, ev.y) * PX
+				fx.splash(at, 2.4)
+				_fx.append({"kind": "boom", "pos": at, "t": 0.0})
+				var ours: bool = int(ev.team) == m.sim.ents[m.human].team
+				_say(tr("BALL_GOAL"), 1.8)
+				Sfx.play("win" if ours else "ko")
+				_prev_ball = Vector2(m.sim.bx, m.sim.by)
+				for e in m.sim.ents:
+					_prev[e.id] = Vector2(e.x, e.y) # the kickoff teleports everyone: no sliding across the field
+			"golden":
+				_say(tr("BALL_GOLDEN"), 2.5)
+				Sfx.play("tide")
+			"respawn":
+				_cutouts[int(ev.id)].revive()
+				_prev[int(ev.id)] = Vector2(ev.x, ev.y)
 			"finished":
+				if mode == "ball":
+					var mine: int = m.sim.ents[m.human].place
+					for e in m.sim.ents:
+						if e.alive and e.place == 1 and mine != 2:
+							_cutouts[e.id].trigger("win")
+					_say(tr(["", "BALL_WON", "BALL_DRAW", "BALL_LOST"][clampi(mine, 1, 3)]), 1.5)
+					Sfx.play("win" if mine == 1 else "ko")
+					continue
 				for e in m.sim.ents:
 					if e.alive and e.place == 1:
 						_cutouts[e.id].trigger("win")
@@ -344,6 +385,8 @@ const FOE := Color("FF5A4E")
 ## On the ground, below the animals: snacks, ink clouds, dive markers, ripples, shadows and team rings.
 func _draw_board() -> void:
 	var sim := m.sim
+	if mode == "ball":
+		_draw_field()
 	for s in sim.snacks:
 		var p := Vector2(s[0], s[1]) * PX
 		board.draw_circle(p, 13.0, INK)
@@ -369,8 +412,17 @@ func _draw_board() -> void:
 		if e.alive:
 			board.draw_set_transform(_pos_px(e) + Vector2(0, 20), 0.0, Vector2(1.0, 0.38))
 			board.draw_circle(Vector2.ZERO, 26.0, Color(0, 0, 0, 0.18))
-			board.draw_arc(Vector2.ZERO, 32.0, 0, TAU, 40, ME if e.id == m.human else FOE, 9.0)
+			if mode == "ball": # team colours; you get a white edge as well
+				if e.id == m.human:
+					board.draw_arc(Vector2.ZERO, 32.0, 0, TAU, 40, Color.WHITE, 15.0)
+				board.draw_arc(Vector2.ZERO, 32.0, 0, TAU, 40, TEAM[e.team], 9.0)
+			else:
+				board.draw_arc(Vector2.ZERO, 32.0, 0, TAU, 40, ME if e.id == m.human else FOE, 9.0)
 			board.draw_set_transform(Vector2.ZERO)
+	if mode == "ball":
+		board.draw_set_transform(_ball_px() + Vector2(0, 14), 0.0, Vector2(1.0, 0.4))
+		board.draw_circle(Vector2.ZERO, float(sim.rules.ball.radius) * PX, Color(0, 0, 0, 0.22))
+		board.draw_set_transform(Vector2.ZERO)
 
 
 ## Above the animals: projectiles, effects, health bars, "YOU", charges and the auto-aim target.
@@ -392,6 +444,8 @@ func _draw_overlay() -> void:
 				overlay.draw_circle(f.pos + Vector2(0, -k * 30.0), 8.0, Color(0.36, 0.84, 0.42, 1.0 - k))
 			_:
 				overlay.draw_arc(f.pos, 4.0 + k * 16.0, 0, TAU, 16, Color(1, 1, 1, 1.0 - k), 2.0)
+	if mode == "ball":
+		_draw_ball()
 	fx.draw_drops(overlay)
 	if _blind > 0.01:
 		FxDraw.ink_blind(overlay, _pos_px(sim.ents[m.human]), 150.0, _blind, _ink)
@@ -410,7 +464,7 @@ func _draw_bars(e: MatchSim.Ent) -> void:
 	var top := p + Vector2(-w / 2, -86 - lift)
 	overlay.draw_rect(Rect2(top - Vector2(2, 2), Vector2(w + 4, 11)), INK)
 	var f := clampf(float(e.hp) / float(e.max_hp), 0.0, 1.0)
-	var col := FOE
+	var col: Color = FOE if mode == "" else TEAM[e.team]
 	if mine:
 		col = Color("5BD66B") if f > 0.5 else (Color("FFD23F") if f > 0.25 else FOE)
 	overlay.draw_rect(Rect2(top, Vector2(w * f, 7)), col)
@@ -543,6 +597,10 @@ func _update_hud() -> void:
 	_left.text = tr("HUD_LEFT").format({"count": sim.alive_count()})
 	var start := int(sim.rules.tide.start_level)
 	_tide.text = tr("HUD_TIDE").format({"level": sim.level - start + 1, "max": int(sim.rules.tide.max_level) - start + 1})
+	if mode == "ball":
+		_left.text = tr("BALL_SCORE").format({"blue": sim.score_0, "orange": sim.score_1})
+		var left := sim.ball_seconds_left()
+		_tide.text = ("%d:%02d" % [left / 60, left % 60]) if sim.golden == 0 else tr("BALL_GOLDEN_SHORT")
 	var phase := float(sim.rules.tide.phase_ticks)
 	_tide_bar.value = 100.0 if sim.level >= int(sim.rules.tide.max_level) else (1.0 - sim.phase_left / phase) * 100.0
 	_msg_label.text = _msg
@@ -650,3 +708,56 @@ func _online_step() -> bool:
 			print("online settled tick %d hash %d seat %d of %d rollbacks %d" % [_next_hash, rb.settled_hash(_next_hash), m.human, m.sim.ents.size(), rb.rollbacks])
 		_next_hash += Rollback.HASH_EVERY
 	return true
+
+
+# --- Strandbal (phase 14): field, goals, ball ---
+
+const TEAM := [Color("3F8CFF"), Color("FF8A3D")] # blue, orange (team rings, nets)
+const LINE := Color(1, 1, 1, 0.55)
+
+
+func _ball_px() -> Vector2:
+	return _prev_ball.lerp(Vector2(m.sim.bx, m.sim.by), _alpha()) * PX
+
+
+## Lines in the sand, the centre circle and the two goals (posts + net, in the colour of the team defending it).
+func _draw_field() -> void:
+	var f := m.sim.field
+	var r := Rect2(Vector2(f[0], f[1]) * PX, Vector2(f[2] - f[0], f[3] - f[1]) * PX)
+	board.draw_rect(r, LINE, false, 6.0)
+	var cx := r.position.x + r.size.x / 2.0
+	board.draw_line(Vector2(cx, r.position.y), Vector2(cx, r.end.y), LINE, 6.0)
+	board.draw_arc(r.get_center(), 3.0 * 1000.0 * PX, 0, TAU, 48, LINE, 6.0)
+	var y0 := float(m.sim.mouth[0]) * PX
+	var y1 := float(m.sim.mouth[1]) * PX
+	var depth := 2.2 * 1000.0 * PX
+	for team in 2:
+		var x := r.position.x if team == 0 else r.end.x
+		var back := x - depth if team == 0 else x + depth
+		var net := Rect2(Vector2(minf(x, back), y0), Vector2(depth, y1 - y0))
+		board.draw_rect(net, Color(TEAM[team], 0.25))
+		for i in range(1, 8):
+			var yy := y0 + (y1 - y0) * i / 8.0
+			board.draw_line(Vector2(x, yy), Vector2(back, yy), Color(1, 1, 1, 0.35), 2.0)
+		board.draw_rect(net, TEAM[team], false, 5.0)
+		for yy in [y0, y1]:
+			board.draw_circle(Vector2(x, yy), 13.0, INK)
+			board.draw_circle(Vector2(x, yy), 9.0, Color.WHITE)
+
+
+## A beach ball: white with coloured wedges, rolling with the distance it travels.
+func _draw_ball() -> void:
+	var p := _ball_px()
+	var rad := float(m.sim.rules.ball.radius) * PX
+	var spin := (p.x + p.y) / maxf(1.0, rad)
+	overlay.draw_circle(p, rad + 4.0, INK)
+	overlay.draw_circle(p, rad, Color.WHITE)
+	var cols := [TEAM[0], Color("FFD23F"), TEAM[1]]
+	for i in 3:
+		var a0 := spin + i * TAU / 3.0
+		var pts := PackedVector2Array([p])
+		for k in 7:
+			pts.append(p + Vector2.from_angle(a0 + k * (TAU / 6.0) / 6.0) * rad)
+		overlay.draw_colored_polygon(pts, cols[i])
+	overlay.draw_circle(p, rad * 0.22, Color.WHITE)
+	overlay.draw_arc(p + Vector2(-rad * 0.3, -rad * 0.35), rad * 0.3, PI * 1.1, PI * 1.6, 8, Color(1, 1, 1, 0.8), 3.0)

@@ -115,6 +115,29 @@ def main() -> int:
         fps = [line for line in console if line.startswith("fps ")]
         print("match console:", "; ".join(fps) or "no fps lines")
 
+        # Strandbal (phase 14): the ball mode through the debug entry; playing must move things
+        page.goto(f"http://127.0.0.1:{port}/index.html?scene=match&mode=ball&seed=123&lang=nl")
+        try:
+            page.wait_for_selector("#loader.done", state="attached", timeout=60000)
+        except Exception:
+            failures.append("ball: engine did not start")
+        page.wait_for_timeout(3500)  # intro + kickoff pause
+        if shots:
+            page.screenshot(path=f"{shots}/web-ball-start-nl.png")
+        hashes = set()
+        page.keyboard.down("KeyD")
+        page.keyboard.down("Space")
+        for _ in range(6):
+            hashes.add(canvas_hash(page))
+            page.wait_for_timeout(400)
+        page.keyboard.up("KeyD")
+        page.keyboard.up("Space")
+        if len(hashes) < 3:
+            failures.append("ball: the canvas barely changed while playing")
+        page.wait_for_timeout(6000)
+        if shots:
+            page.screenshot(path=f"{shots}/web-ball-play-nl.png")
+
         # settings (account, controls) and the report overlay (F8 anywhere)
         page.goto(f"http://127.0.0.1:{port}/index.html?scene=settings")
         try:
