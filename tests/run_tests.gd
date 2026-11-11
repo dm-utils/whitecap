@@ -42,6 +42,7 @@ func _ready() -> void:
 	test_touch_and_safe_area()
 	test_perf_meter()
 	test_rewards_season_collection()
+	test_rollback()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -724,6 +725,63 @@ func test_rewards_season_collection() -> void:
 	box.free()
 	shade.free()
 	screen.free()
+
+
+## Online: six screens over a laggy, jittery network end in exactly the same state as one run with all input known.
+func test_rollback() -> void:
+	for setup in [{"players": 2, "lag": [1, 3]}, {"players": 6, "lag": [2, 9]}]:
+		var n: int = setup.players
+		var seed_value := 90210
+		var animals: Array = []
+		for i in n:
+			animals.append(Match.SLICE_ANIMALS[i % 3])
+		var clients: Array = []
+		for i in n:
+			clients.append(Rollback.new(Match.create_online(seed_value, animals, 6, "normal"), i))
+		var net := RandomNumberGenerator.new()
+		net.seed = 7
+		var in_flight: Array = [] # [arrive_at_step, to, from, tick, cmd]
+		var ticks := 360
+		var step := 0
+		var t0 := Time.get_ticks_msec()
+		while clients.any(func(c): return c.tick < ticks) and step < ticks * 4:
+			step += 1
+			for msg in in_flight.filter(func(x): return x[0] <= step):
+				clients[msg[1]].remote_input(msg[2], msg[3], msg[4])
+			in_flight = in_flight.filter(func(x): return x[0] > step)
+			for i in n:
+				var c: Rollback = clients[i]
+				if c.tick >= ticks or not c.can_advance():
+					continue
+				# each player reacts to what they see on their own screen (predictions included)
+				c.local_input(Match.cmd_to(_player_cmd(c.m.sim, c.m.sim.ents[i])))
+				for out in c.outbox:
+					for j in n:
+						if j != i:
+							in_flight.append([step + net.randi_range(setup.lag[0], setup.lag[1]), j, i, out[0], out[1]])
+				c.outbox.clear()
+				c.advance()
+		for msg in in_flight: # the network delivers the rest
+			clients[msg[1]].remote_input(msg[2], msg[3], msg[4])
+		var hashes: Array = clients.map(func(c): return c.settle())
+		var inputs: Dictionary = clients[0].confirmed_inputs(ticks)
+		var ref := Match.create_online(seed_value, animals, 6, "normal")
+		for t in ticks:
+			var cmds := {}
+			for s in ref.humans:
+				cmds[s] = inputs[s][t]
+			ref.step_many(cmds)
+		var same := hashes.all(func(h): return h == hashes[0])
+		var total_rb := 0
+		var total_resim := 0
+		for c in clients:
+			total_rb += c.rollbacks
+			total_resim += c.resimulated
+		var what := "%d players, lag %s ticks: every screen ends identical to the reference (%d rollbacks, %d ticks replayed, %d ms for %d screens x %d ticks)" % [
+			n, str(setup.lag), total_rb, total_resim, Time.get_ticks_msec() - t0, n, ticks]
+		print("rollback: " + what)
+		check(same and hashes[0] == ref.sim.state_hash(), what)
+		check(total_rb > 0, "%d players: predictions really were corrected (the test exercises rollback)" % n)
 
 
 ## A new key goes into every language in the same change, with the same placeholders ({count} etc.).

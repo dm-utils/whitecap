@@ -10,6 +10,7 @@ var human := -1
 var bot_level := "easy"
 var names: Array = []
 var replay: Array = [] # human commands per tick (compact), for replays and server checks later
+var humans: Array = [] # online: the player slots (the rest are bots)
 
 var _bot_cfg: Dictionary
 
@@ -52,6 +53,60 @@ func step(human_cmd: Dictionary = {}) -> void:
 	if human >= 0:
 		replay.append([int(human_cmd.get("m", -1)), int(human_cmd.get("a", -1)), int(human_cmd.get("s", -1)), int(human_cmd.get("sd", -1))])
 	sim.step(cmds)
+
+
+## Online (phase 12): several players in slots 0..n-1 (their animals in order), bots fill the rest. Everyone in the
+## match builds it the same way from the same seed, so bots act the same on every screen.
+static func create_online(seed_value: int, animals: Array, players := 6, level := "normal") -> Match:
+	var m := create(seed_value, "", players, level)
+	# rebuild with the players first: create() with "" made all bots; redo with fixed entrants
+	var pick := SimRng.new(seed_value ^ 0x5BD1E995)
+	var entrants: Array = animals.duplicate()
+	while entrants.size() < players:
+		entrants.append(SLICE_ANIMALS[pick.range_i(SLICE_ANIMALS.size())])
+	m.sim = MatchSim.new(seed_value, entrants)
+	m.humans = []
+	for i in animals.size():
+		m.humans.append(i)
+	for e in m.sim.ents:
+		if e.id >= animals.size():
+			e.is_bot = 1
+			e.damage_pct = int(m._bot_cfg.damage_pct)
+	m.human = -1
+	return m
+
+
+## One tick for an online match: cmds = {slot: [m, a, s, sd]} for every player slot (missing = standing still).
+func step_many(cmds: Dictionary) -> void:
+	var list: Array = []
+	for e in sim.ents:
+		if not e.alive:
+			list.append({})
+		elif humans.has(e.id):
+			list.append(cmd_from(cmds.get(e.id, EMPTY)))
+		else:
+			list.append(BotBrain.think(sim, e, _bot_cfg))
+	sim.step(list)
+
+
+## A player who left: from now on a bot plays that slot (every screen does it at the same tick).
+func to_bot(slot: int) -> void:
+	humans.erase(slot)
+	sim.ents[slot].is_bot = 1
+
+
+const EMPTY := [-1, -1, -1, -1]
+
+
+static func cmd_from(c: Array) -> Dictionary:
+	var d := {"m": int(c[0]), "a": int(c[1]), "s": int(c[2])}
+	if int(c[3]) != -1:
+		d["sd"] = int(c[3])
+	return d
+
+
+static func cmd_to(d: Dictionary) -> Array:
+	return [int(d.get("m", -1)), int(d.get("a", -1)), int(d.get("s", -1)), int(d.get("sd", -1))]
 
 
 func finished() -> bool:
