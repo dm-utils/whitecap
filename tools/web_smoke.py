@@ -194,12 +194,23 @@ def main() -> int:
             opg.mouse.click(135, 117)  # "Online spelen", the first menu button
         online_pages[0].wait_for_timeout(12000)  # lobby wait (8 s) + drop-in
         online_pages[0].keyboard.down("Space")
-        online_pages[0].wait_for_timeout(15000)
+        rx = re.compile(r"online settled tick (\d+) hash (-?\d+) seat (\d+)")
+
+        def settled():
+            return [{int(m.group(1)): (int(m.group(2)), int(m.group(3))) for line in online_logs[i] for m in [rx.search(line)] if m} for i in range(2)]
+
+        # a slow runner (two software-rendered windows) needs longer: wait for 3 common checks, at most 75 s
+        for _ in range(25):
+            online_pages[0].wait_for_timeout(3000)
+            got = settled()
+            if len(set(got[0]) & set(got[1])) >= 3:
+                break
         if shots:
             online_pages[1].screenshot(path=f"{shots}/web-online.png")
-        rx = re.compile(r"online settled tick (\d+) hash (-?\d+) seat (\d+)")
-        got = [{int(m.group(1)): (int(m.group(2)), int(m.group(3))) for line in online_logs[i] for m in [rx.search(line)] if m} for i in range(2)]
+        got = settled()
         common = sorted(set(got[0]) & set(got[1]))
+        for i in range(2):
+            print(f"online window {i}:", "; ".join(l for l in online_logs[i] if l.startswith("fps ") or "online" in l)[-400:])
         seats = {v[1] for g in got for v in g.values()}
         print(f"online: settled ticks {len(got[0])} / {len(got[1])}, common {len(common)}, seats {sorted(seats)}")
         if len(seats) < 2:
